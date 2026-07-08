@@ -1,0 +1,20 @@
+[
+  {
+    "file": "src/main.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Ivendor/mpc",
+      "src/main.c",
+      "-o",
+      "run"
+    ],
+    "directory": "/home/kami-sama/lunaar/projects/my-lisp",
+    "output": "run"
+  }
+]
