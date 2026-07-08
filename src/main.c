@@ -38,33 +38,33 @@ Grammer *create_lisp_grammer(void) {
 	return g;
 }
 
-int number_of_nodes(mpc_ast_t *tree) {
-	if (tree == NULL) {
-		return 0;
-	} else if (tree->children_num == 0) {
-		return 1;
+long eval_op(char *op, long a, long b) {
+	if (strcmp(op, "+") == 0) {
+		return a + b;
+	} else if (strcmp(op, "-") == 0) {
+		return a - b;
+	} else if (strcmp(op, "*") == 0) {
+		return a * b;
+	} else if (strcmp(op, "/") == 0) {
+		return a / b;
 	}
-	int total = 1;
-	for (int i = 0; i < tree->children_num; i++) {
-		total += number_of_nodes(tree->children[i]);
-	}
-	return total;
+	return 0;
 }
-long int evaluate_tree(mpc_ast_t *tree) {
-	if (tree == NULL)
-		return 0;
 
+long int eval(mpc_ast_t *tree) {
 	if (strstr(tree->tag, "number"))
 		return atoi(tree->contents);
 
-	if (tree->children_num == 0)
-		return 0;
+	char *op = tree->children[1]->contents;
+	long int x = eval(tree->children[2]);
 
-	long int final = 0;
+	int i = 3;
+	while (strstr(tree->children[i]->tag, "expr")) {
+		x = eval_op(op, x, eval(tree->children[i]));
+		i++;
+	}
 
-	// TODO: polish notations algorithm
-
-	return final;
+	return x;
 }
 
 int main(void) {
@@ -88,14 +88,14 @@ int main(void) {
 
 		mpc_result_t r;
 		if (mpc_parse("<stdin>", res, grammer->my_lisp, &r)) {
-			mpc_ast_print(r.output);
-			printf("no. of nodes: %d\n", number_of_nodes(r.output));
+			// mpc_ast_print(r.output);
+			printf("=> %ld\n", eval(r.output));
 			mpc_ast_delete(r.output);
-			add_history(res);
 		} else {
 			mpc_err_print(r.error);
 			mpc_err_delete(r.error);
 		}
+		add_history(res);
 
 	cleanup:
 		free(res);
