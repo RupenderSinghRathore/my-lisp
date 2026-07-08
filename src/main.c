@@ -1,6 +1,7 @@
 #include "mpc.h"
 #include <assert.h>
 #include <editline/readline.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,26 +29,57 @@ Grammer *create_lisp_grammer(void) {
 
 	mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "    \
     number   : /-?[0-9]+/ ;                            \
-    operator : '+' | '-' | '*' | '/' ;                 \
+    operator : '+' | '-' | '*' | '/' | '%' | '^' | \"max\" | \"min\" ;     \
     expr     : <number> | '(' <operator> <expr>+ ')' ; \
     my_lisp    : /^/ <operator> <expr>+ /$/ ;          \
     ",
 	                           g->number, g->operator, g->expr, g->my_lisp);
 	assert(!err);
+	// mpc_err_print(err);
 
 	return g;
 }
 
-long eval_op(char *op, long a, long b) {
-	if (strcmp(op, "+") == 0) {
-		return a + b;
-	} else if (strcmp(op, "-") == 0) {
-		return a - b;
-	} else if (strcmp(op, "*") == 0) {
-		return a * b;
-	} else if (strcmp(op, "/") == 0) {
-		return a / b;
+int number_of_leaf(mpc_ast_t *tree) {
+	if (tree->children_num == 0) {
+		return 1;
 	}
+	int count = 0;
+	for (int i = 0; i < tree->children_num; i++) {
+		count += number_of_leaf(tree->children[i]);
+	}
+	return count;
+}
+int number_of_branches(mpc_ast_t *tree) {
+	if (tree->children_num == 0) {
+		return 0;
+	}
+	int count = 0;
+	for (int i = 0; i < tree->children_num; i++) {
+		count += number_of_branches(tree->children[i]);
+		count++;
+	}
+	return count;
+}
+
+long eval_op(char *op, long a, long b) {
+	if (strcmp(op, "+") == 0)
+		return a + b;
+	if (strcmp(op, "-") == 0)
+		return a - b;
+	if (strcmp(op, "*") == 0)
+		return a * b;
+	if (strcmp(op, "/") == 0)
+		return a / b;
+	if (strcmp(op, "%") == 0)
+		return a % b;
+	if (strcmp(op, "^") == 0)
+		return pow(a, b);
+	if (strcmp(op, "max") == 0)
+		return a > b ? a : b;
+	if (strcmp(op, "min") == 0)
+		return a < b ? a : b;
+
 	return 0;
 }
 
@@ -59,6 +91,10 @@ long int eval(mpc_ast_t *tree) {
 	long int x = eval(tree->children[2]);
 
 	int i = 3;
+
+	if (strcmp(op, "-") == 0 && i + 1 >= tree->children_num)
+		x = -x;
+
 	while (strstr(tree->children[i]->tag, "expr")) {
 		x = eval_op(op, x, eval(tree->children[i]));
 		i++;
@@ -90,6 +126,8 @@ int main(void) {
 		if (mpc_parse("<stdin>", res, grammer->my_lisp, &r)) {
 			// mpc_ast_print(r.output);
 			printf("=> %ld\n", eval(r.output));
+			// printf("no. of leaf: %d\n", number_of_leaf(r.output));
+			// printf("no. of branches: %d\n", number_of_branches(r.output));
 			mpc_ast_delete(r.output);
 		} else {
 			mpc_err_print(r.error);
