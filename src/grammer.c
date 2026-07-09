@@ -21,11 +21,13 @@ Grammer *create_lisp_grammer(void) {
 	g->expr = mpc_new("expr");
 	g->my_lisp = mpc_new("my_lisp");
 
-	// TODO: maybe switch to double
-	// number   : /-? [0-9]+ | -? [0-9]+ '.' [0-9]+ | -? [0-9]+ '.' | -? '.' [0-9]+ / ;
+	/*
+	 * // TODO: maybe switch to double
+	 * // number   : /-?[0-9]+/ ; \
+	 */
 
 	mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "    \
-    number   : /-?[0-9]+/ ;                            \
+	number   : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;    \
     operator : '+' | '-' | '*' | '/' | '%' | '^' | \"max\" | \"min\" ;     \
     expr     : <number> | '(' <operator> <expr>+ ')' ; \
     my_lisp    : /^/ <operator> <expr>+ /$/ ;          \
@@ -37,7 +39,7 @@ Grammer *create_lisp_grammer(void) {
 	return g;
 }
 
-lval new_lval_num(long num) {
+lval new_lval_num(double num) {
 	return (lval){
 	    .type = LVAL_NUM,
 	    .num = num,
@@ -53,7 +55,7 @@ lval new_lval_err(lval_err err) {
 void lval_print(lval l) {
 	switch (l.type) {
 	case LVAL_NUM:
-		printf("=> %ld", l.num);
+		printf("=> %g", l.num);
 		break;
 	case LVAL_ERR:
 		switch (l.err) {
@@ -103,29 +105,32 @@ lval eval_op(char *op, lval a, lval b) {
 	if (b.type == LVAL_ERR)
 		return b;
 
+	double x = a.num;
+	double y = b.num;
+
 	if (strcmp(op, "+") == 0)
-		return new_lval_num(a.num + b.num);
+		return new_lval_num(x + y);
 
 	if (strcmp(op, "-") == 0)
-		return new_lval_num(a.num - b.num);
+		return new_lval_num(x - y);
 
 	if (strcmp(op, "*") == 0)
-		return new_lval_num(a.num * b.num);
+		return new_lval_num(x * y);
 
 	if (strcmp(op, "/") == 0)
-		return (b.num == 0) ? new_lval_err(LERR_DIV_BY_ZERO) : new_lval_num(a.num / b.num);
+		return (y == 0) ? new_lval_err(LERR_DIV_BY_ZERO) : new_lval_num(x / y);
 
 	if (strcmp(op, "%") == 0)
-		return (b.num == 0) ? new_lval_err(LERR_DIV_BY_ZERO) : new_lval_num(a.num % b.num);
+		return (y == 0) ? new_lval_err(LERR_DIV_BY_ZERO) : new_lval_num(fmod(x, y));
 
 	if (strcmp(op, "^") == 0)
-		return new_lval_num(pow(a.num, b.num));
+		return new_lval_num(pow(x, y));
 
 	if (strcmp(op, "max") == 0)
-		return new_lval_num(a.num > b.num ? a.num : b.num);
+		return new_lval_num(x > y ? x : y);
 
 	if (strcmp(op, "min") == 0)
-		return new_lval_num(a.num < b.num ? a.num : b.num);
+		return new_lval_num(x < y ? x : y);
 
 	return new_lval_err(LERR_BAD_OP);
 }
@@ -134,7 +139,7 @@ lval eval(mpc_ast_t *tree) {
 
 	if (strstr(tree->tag, "number")) {
 		errno = 0;
-		long num = strtol(tree->contents, NULL, 10);
+		double num = strtod(tree->contents, NULL);
 		return (errno == ERANGE) ? new_lval_err(LERR_BAD_NUM) : new_lval_num(num);
 	}
 

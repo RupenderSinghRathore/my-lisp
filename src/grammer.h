@@ -24,12 +24,12 @@ typedef enum { LERR_DIV_BY_ZERO,
 typedef struct {
 	lval_type type;
 	union {
-		long num;
+		double num;
 		lval_err err;
 	};
 } lval;
 
-lval new_lval_num(long num);
+lval new_lval_num(double num);
 lval new_lval_err(lval_err err);
 
 void lval_print(lval l);
