@@ -1,6 +1,7 @@
 #include "mpc.h"
 #include <assert.h>
 #include <editline/readline.h>
+#include <errno.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -150,8 +151,9 @@ lval eval_op(char *op, lval a, lval b) {
 
 lval eval(mpc_ast_t *tree) {
 	if (strstr(tree->tag, "number")) {
-		// TODO: proper error handling
-		return new_lval_num(atoi(tree->contents));
+		errno = 0;
+		long num = strtol(tree->contents, NULL, 10);
+		return (errno == ERANGE) ? new_lval_err(LERR_BAD_NUM) : new_lval_num(num);
 	}
 
 	char *op = tree->children[1]->contents;
