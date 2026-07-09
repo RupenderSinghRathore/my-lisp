@@ -23,8 +23,10 @@ typedef enum { LERR_DIV_BY_ZERO,
 
 typedef struct {
 	lval_type type;
-	long num;
-	lval_err err;
+	union {
+		long num;
+		lval_err err;
+	};
 } lval;
 
 lval new_lval_num(long num);

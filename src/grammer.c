@@ -1,3 +1,4 @@
+#include "grammer.h"
 #include "mpc.h"
 #include <assert.h>
 #include <editline/readline.h>
@@ -5,13 +6,6 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
-typedef struct {
-	mpc_parser_t *number;
-	mpc_parser_t *operator;
-	mpc_parser_t *expr;
-	mpc_parser_t *my_lisp;
-} Grammer;
 
 void clean_grammer(Grammer *g) {
 	mpc_cleanup(4, g->number, g->operator, g->expr, g->my_lisp);
@@ -43,36 +37,23 @@ Grammer *create_lisp_grammer(void) {
 	return g;
 }
 
-typedef enum { LVAL_NUM,
-	           LVAL_ERR } lval_type;
-
-typedef enum { LERR_DIV_BY_ZERO,
-	           LERR_BAD_OP,
-	           LERR_BAD_NUM } lval_err;
-
-typedef struct {
-	lval_type type;
-	long num;
-	lval_err err;
-} lval;
-
 lval new_lval_num(long num) {
-	lval v;
-	v.num = num;
-	v.type = LVAL_NUM;
-	return v;
+	return (lval){
+	    .type = LVAL_NUM,
+	    .num = num,
+	};
 }
 lval new_lval_err(lval_err err) {
-	lval v;
-	v.err = err;
-	v.type = LVAL_ERR;
-	return v;
+	return (lval){
+	    .type = LVAL_ERR,
+	    .err = err,
+	};
 }
 
 void lval_print(lval l) {
 	switch (l.type) {
 	case LVAL_NUM:
-		printf("=> %ld\n", l.num);
+		printf("=> %ld", l.num);
 		break;
 	case LVAL_ERR:
 		switch (l.err) {
@@ -150,6 +131,7 @@ lval eval_op(char *op, lval a, lval b) {
 }
 
 lval eval(mpc_ast_t *tree) {
+
 	if (strstr(tree->tag, "number")) {
 		errno = 0;
 		long num = strtol(tree->contents, NULL, 10);

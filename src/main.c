@@ -18,9 +18,10 @@ int main(void) {
 		char *res = readline(prompt);
 		assert(res);
 
-		if (!strcmp(res, "")) {
+		if (strcmp(res, "") == 0)
 			goto cleanup;
-		} else if (!strcmp(res, "exit")) {
+
+		if (strcmp(res, "exit") == 0) {
 			quit = true;
 			goto cleanup;
 		}
@@ -28,7 +29,6 @@ int main(void) {
 		mpc_result_t r;
 		if (mpc_parse("<stdin>", res, grammer->my_lisp, &r)) {
 			// mpc_ast_print(r.output);
-			// printf("=> %ld\n", eval(r.output));
 			lval_print_ln(eval(r.output));
 			mpc_ast_delete(r.output);
 		} else {
