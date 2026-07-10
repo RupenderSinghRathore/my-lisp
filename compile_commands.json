@@ -1,9 +1,29 @@
 [
   {
+    "file": "src/grammer.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-O0",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Ivendor/mpc",
+      "src/grammer.c",
+      "-o",
+      "run"
+    ],
+    "directory": "/home/kami-sama/lunaar/projects/my-lisp",
+    "output": "run"
+  },
+  {
     "file": "src/main.c",
     "arguments": [
       "/usr/bin/gcc",
       "-g",
+      "-O0",
       "-Wall",
       "-Wextra",
       "-Wpedantic",
@@ -11,6 +31,25 @@
       "-fno-omit-frame-pointer",
       "-Ivendor/mpc",
       "src/main.c",
+      "-o",
+      "run"
+    ],
+    "directory": "/home/kami-sama/lunaar/projects/my-lisp",
+    "output": "run"
+  },
+  {
+    "file": "vendor/mpc/mpc.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-O0",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Ivendor/mpc",
+      "vendor/mpc/mpc.c",
       "-o",
       "run"
     ],
