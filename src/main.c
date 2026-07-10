@@ -15,7 +15,7 @@ int main(void) {
 
     const char prompt[] = "lisp> ";
     bool quit = false;
-    while (true) {
+    while (!quit) {
         char *res = readline(prompt);
         assert(res);
 
@@ -30,11 +30,10 @@ int main(void) {
         mpc_result_t r;
         if (mpc_parse("<stdin>", res, grammer->my_lisp, &r)) {
             // mpc_ast_print(r.output);
-            // lval_print_ln(eval(r.output));
-            lval *l = lval_read(r.output);
+            lval *l = eval(lval_read(r.output));
             lval_print_ln(l);
 
-            del_lval(l);
+            lval_del(l);
             mpc_ast_delete(r.output);
         } else {
             mpc_err_print(r.error);
@@ -44,8 +43,6 @@ int main(void) {
 
     cleanup:
         free(res);
-        if (quit)
-            break;
     }
 
     clean_grammer(grammer);

@@ -39,7 +39,7 @@ lval *new_lval_sexpr(void);
 
 lval *lval_add(lval *l, lval *c);
 
-void del_lval(lval *l);
+void lval_del(lval *l);
 
 void lval_print(lval *l);
 void lval_print_ln(lval *l);
@@ -49,5 +49,7 @@ int number_of_leaf(mpc_ast_t *tree);
 int number_of_branches(mpc_ast_t *tree);
 lval eval_op(char *op, lval a, lval b);
 
-lval eval(mpc_ast_t *tree);
+lval *eval(lval *v);
+lval *eval_sexpr(lval *v);
 lval *lval_read(mpc_ast_t *tree);
+lval *builtin_op(lval *v, char *s);

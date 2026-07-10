@@ -75,7 +75,7 @@ lval *new_lval_sexpr(void) {
     return l;
 }
 
-void del_lval(lval *l) {
+void lval_del(lval *l) {
     switch (l->type) {
     case LVAL_NUM:
         break;
@@ -87,7 +87,7 @@ void del_lval(lval *l) {
         break;
     case LVAL_SEXPR:
         for (int i = 0; i < l->count; i++)
-            del_lval(l->cell[i]);
+            lval_del(l->cell[i]);
         free(l->cell);
         break;
     }
@@ -135,63 +135,88 @@ void lval_print_ln(lval *l) {
     putchar('\n');
 }
 
-// lval eval_op(char *op, lval a, lval b) {
-//   if (a.type == LVAL_ERR)
-//     return a;
-//   if (b.type == LVAL_ERR)
-//     return b;
-//
-//   double x = a.num;
-//   double y = b.num;
-//
-//   if (strcmp(op, "+") == 0) return new_lval_num(x + y);
-//
-//   if (strcmp(op, "-") == 0) return new_lval_num(x - y);
-//
-//   if (strcmp(op, "*") == 0) return new_lval_num(x * y);
-//
-//   if (strcmp(op, "/") == 0) return (y == 0) ? new_lval_err(LERR_DIV_BY_ZERO)
-//   : new_lval_num(x / y);
-//
-//   if (strcmp(op, "%") == 0)
-//     return (y == 0) ? new_lval_err(LERR_DIV_BY_ZERO)
-//                     : new_lval_num(fmod(x, y));
-//
-//   if (strcmp(op, "^") == 0) return new_lval_num(pow(x, y));
-//
-//   if (strcmp(op, "max") == 0)
-//     return new_lval_num(x > y ? x : y);
-//
-//   if (strcmp(op, "min") == 0)
-//     return new_lval_num(x < y ? x : y);
-//
-//   return new_lval_err(LERR_BAD_OP);
-// }
-//
-// lval eval(mpc_ast_t *tree) {
-//
-//   if (strstr(tree->tag, "number")) {
-//     errno = 0;
-//     double num = strtod(tree->contents, NULL);
-//     return (errno == ERANGE) ? new_lval_err(LERR_BAD_NUM)
-//                              : new_lval_num(num);
-//   }
-//
-//   char *op = tree->children[1]->contents;
-//   lval x = eval(tree->children[2]);
-//
-//   int i = 3;
-//
-//   if (strcmp(op, "-") == 0 && i + 1 >= tree->children_num)
-//     x.num = -x.num;
-//
-//   while (strstr(tree->children[i]->tag, "expr")) {
-//     x = eval_op(op, x, eval(tree->children[i]));
-//     i++;
-//   }
-//
-//   return x;
-// }
+lval *eval_sexpr(lval *v) {
+    lval *result = NULL;
+    for (int i = 0; i < v->count; i++) {
+        v->cell[i] = eval(v->cell[i]);
+
+        if (v->cell[i]->type == LVAL_ERR) {
+            result = new_lval_err(v->cell[i]->err);
+            goto cleanup;
+        }
+    }
+    if (v->count == 0)
+        return v;
+
+    lval *x = v->cell[0];
+    if (x->type != LVAL_SYM) {
+        result = new_lval_err("s-expression does not start with a symbol!");
+        goto cleanup;
+    }
+
+    result = builtin_op(v, x->sym);
+
+cleanup:
+    lval_del(v);
+    return result;
+}
+
+lval *builtin_op(lval *v, char *op) {
+    for (int i = 1; i < v->count; i++)
+        if (v->cell[i]->type != LVAL_NUM)
+            return new_lval_err("operands must be a number!");
+
+    if (v->count < 2)
+        return new_lval_err("not enough operands");
+
+    double x = v->cell[1]->num;
+
+    int i = 2;
+    // nagation
+    if (strcmp(op, "-") == 0 && i == v->count)
+        x = -x;
+
+    for (; i < v->count; i++) {
+        double y = v->cell[i]->num;
+
+        if (strcmp(op, "+") == 0)
+            x = x + y;
+
+        else if (strcmp(op, "-") == 0)
+            x = x - y;
+
+        else if (strcmp(op, "*") == 0)
+            x = x * y;
+
+        else if (strcmp(op, "/") == 0) {
+            if (y == 0)
+                return new_lval_err("can't divide by zero!");
+            x = x / y;
+        } else if (strcmp(op, "%") == 0) {
+            if (y == 0)
+                return new_lval_err("can't divide by zero!");
+            x = fmod(x, y);
+        } else if (strcmp(op, "^") == 0)
+            x = pow(x, y);
+
+        else if (strcmp(op, "max") == 0)
+            x = x > y ? x : y;
+
+        else if (strcmp(op, "min") == 0)
+            x = x < y ? x : y;
+
+        else
+            return new_lval_err("unknown symbol");
+    }
+    return new_lval_num(x);
+}
+
+lval *eval(lval *v) {
+    if (v->type == LVAL_SEXPR) {
+        return eval_sexpr(v);
+    }
+    return v;
+}
 
 lval *lval_read_number(mpc_ast_t *t) {
     errno = 0;
