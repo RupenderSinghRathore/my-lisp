@@ -17,6 +17,8 @@ Grammer *create_lisp_grammer(void);
 
 typedef enum { LVAL_NUM, LVAL_SYM, LVAL_SEXPR, LVAL_ERR } lval_type;
 
+void lval_type_print(lval_type t);
+
 typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
 typedef struct lval {
@@ -37,13 +39,13 @@ lval *new_lval_err(char *err);
 lval *new_lval_sym(char *sym);
 lval *new_lval_sexpr(void);
 
-lval *lval_add(lval *l, lval *c);
+lval *lval_add(lval *v, lval *c);
+lval *lval_clone(lval *v);
+void lval_del(lval *v);
 
-void lval_del(lval *l);
-
-void lval_print(lval *l);
-void lval_print_ln(lval *l);
-void lval_print_sexpr(lval *l, char start, char end);
+void lval_print(lval *v);
+void lval_print_ln(lval *v);
+void lval_print_sexpr(lval *v, char start, char end);
 
 int number_of_leaf(mpc_ast_t *tree);
 int number_of_branches(mpc_ast_t *tree);

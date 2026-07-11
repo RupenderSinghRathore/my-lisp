@@ -31,6 +31,7 @@ int main(void) {
         if (mpc_parse("<stdin>", res, grammer->my_lisp, &r)) {
             // mpc_ast_print(r.output);
             lval *l = eval(lval_read(r.output));
+            // lval_type_print(l->type);
             lval_print_ln(l);
 
             lval_del(l);

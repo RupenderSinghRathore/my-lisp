@@ -39,6 +39,23 @@ Grammer *create_lisp_grammer(void) {
     return g;
 }
 
+void lval_type_print(lval_type t) {
+    switch (t) {
+    case LVAL_NUM:
+        printf("lval_num\n");
+        break;
+    case LVAL_SYM:
+        printf("lval_sym\n");
+        break;
+    case LVAL_SEXPR:
+        printf("lval_sexpr\n");
+        break;
+    case LVAL_ERR:
+        printf("lval_err\n");
+        break;
+    }
+}
+
 lval *new_lval_num(double num) {
     lval *l;
     l = malloc(sizeof(*l));
@@ -75,63 +92,81 @@ lval *new_lval_sexpr(void) {
     return l;
 }
 
-void lval_del(lval *l) {
-    switch (l->type) {
+void lval_del(lval *v) {
+    switch (v->type) {
     case LVAL_NUM:
         break;
     case LVAL_ERR:
-        free(l->err);
+        free(v->err);
         break;
     case LVAL_SYM:
-        free(l->sym);
+        free(v->sym);
         break;
     case LVAL_SEXPR:
-        for (int i = 0; i < l->count; i++)
-            lval_del(l->cell[i]);
-        free(l->cell);
+        for (int i = 0; i < v->count; i++)
+            lval_del(v->cell[i]);
+        free(v->cell);
         break;
     }
-    free(l);
+    free(v);
 }
 
-lval *lval_add(lval *l, lval *c) {
-    l->count++;
-    l->cell = realloc(l->cell, sizeof(void *) * l->count);
-    l->cell[l->count - 1] = c;
-    return l;
+lval *lval_clone(lval *v) {
+    switch (v->type) {
+    case LVAL_NUM:
+        return new_lval_num(v->num);
+    case LVAL_ERR:
+        return new_lval_err(v->err);
+    case LVAL_SYM:
+        return new_lval_sym(v->sym);
+    case LVAL_SEXPR: {
+        lval *x = new_lval_sexpr();
+        for (int i = 0; i < v->count; i++)
+            lval_add(x, lval_clone(v->cell[i]));
+        return x;
+    }
+    }
+    return NULL;
 }
 
-void lval_print_sexpr(lval *l, char start, char end) {
+lval *lval_add(lval *v, lval *c) {
+    v->count++;
+    v->cell = realloc(v->cell, sizeof(void *) * v->count);
+    v->cell[v->count - 1] = c;
+    return v;
+}
+
+void lval_print_sexpr(lval *v, char start, char end) {
     putchar(start);
-    for (int i = 0; i < l->count; i++) {
-        lval_print(l->cell[i]);
-        if (i != l->count - 1)
+    for (int i = 0; i < v->count; i++) {
+        lval_print(v->cell[i]);
+        if (i != v->count - 1)
             putchar(' ');
     }
     putchar(end);
 }
 
-void lval_print(lval *l) {
-    switch (l->type) {
+void lval_print(lval *v) {
+    switch (v->type) {
     case LVAL_NUM:
-        printf("%g", l->num);
+        printf("%g", v->num);
         break;
 
     case LVAL_ERR:
-        printf("Error: %s", l->err);
+        printf("Error: %s", v->err);
         break;
 
     case LVAL_SYM:
-        printf("%s", l->sym);
+        printf("%s", v->sym);
         break;
 
     case LVAL_SEXPR:
-        lval_print_sexpr(l, '(', ')');
+        lval_print_sexpr(v, '(', ')');
         break;
     }
 }
-void lval_print_ln(lval *l) {
-    lval_print(l);
+void lval_print_ln(lval *v) {
+    lval_print(v);
     putchar('\n');
 }
 
@@ -141,12 +176,16 @@ lval *eval_sexpr(lval *v) {
         v->cell[i] = eval(v->cell[i]);
 
         if (v->cell[i]->type == LVAL_ERR) {
-            result = new_lval_err(v->cell[i]->err);
+            result = lval_clone(v->cell[i]);
             goto cleanup;
         }
     }
     if (v->count == 0)
         return v;
+    else if (v->count == 1) {
+        result = lval_clone(v->cell[0]);
+        goto cleanup;
+    }
 
     lval *x = v->cell[0];
     if (x->type != LVAL_SYM) {
@@ -212,9 +251,8 @@ lval *builtin_op(lval *v, char *op) {
 }
 
 lval *eval(lval *v) {
-    if (v->type == LVAL_SEXPR) {
+    if (v->type == LVAL_SEXPR)
         return eval_sexpr(v);
-    }
     return v;
 }
 
