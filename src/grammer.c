@@ -10,7 +10,8 @@
 #include <string.h>
 
 void clean_grammer(Grammer *g) {
-    mpc_cleanup(5, g->number, g->symbol, g->sexpr, g->expr, g->my_lisp);
+    mpc_cleanup(6, g->number, g->symbol, g->sexpr, g->qexpr, g->expr,
+                g->my_lisp);
     free(g);
 }
 
@@ -21,18 +22,20 @@ Grammer *create_lisp_grammer(void) {
     g->number = mpc_new("number");
     g->symbol = mpc_new("symbol");
     g->sexpr = mpc_new("sexpr");
+    g->qexpr = mpc_new("qexpr");
     g->expr = mpc_new("expr");
     g->my_lisp = mpc_new("my_lisp");
 
-    mpc_err_t *err =
-        mpca_lang(MPCA_LANG_DEFAULT, "    \
+    mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "    \
     number   : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;    \
     symbol : '+' | '-' | '*' | '/' | '%' | '^' | \"max\" | \"min\" ;     \
     sexpr     : '(' <expr>* ')' ;                      \
-    expr     : <number> | <symbol> | <sexpr> ; \
+    qexpr     : '{' <expr>* '}' ;                      \
+    expr     : <number> | <symbol> | <sexpr> | <qexpr> ; \
     my_lisp    : /^/ <expr>* /$/ ;          \
     ",
-                  g->number, g->symbol, g->sexpr, g->expr, g->my_lisp);
+                               g->number, g->symbol, g->sexpr, g->qexpr,
+                               g->expr, g->my_lisp);
     assert(!err);
     // mpc_err_print(err);
 
@@ -49,6 +52,9 @@ void lval_type_print(lval_type t) {
         break;
     case LVAL_SEXPR:
         printf("lval_sexpr\n");
+        break;
+    case LVAL_QEXPR:
+        printf("lval_qexpr\n");
         break;
     case LVAL_ERR:
         printf("lval_err\n");
@@ -83,11 +89,20 @@ lval *new_lval_sym(char *s) {
     l->type = LVAL_SYM;
     return l;
 }
+
 lval *new_lval_sexpr(void) {
     lval *l;
     l = malloc(sizeof(*l));
     l->count = 0;
     l->type = LVAL_SEXPR;
+    l->cell = NULL;
+    return l;
+}
+lval *new_lval_qexpr(void) {
+    lval *l;
+    l = malloc(sizeof(*l));
+    l->count = 0;
+    l->type = LVAL_QEXPR;
     l->cell = NULL;
     return l;
 }
@@ -103,6 +118,7 @@ void lval_del(lval *v) {
         free(v->sym);
         break;
     case LVAL_SEXPR:
+    case LVAL_QEXPR:
         for (int i = 0; i < v->count; i++)
             lval_del(v->cell[i]);
         free(v->cell);
@@ -119,6 +135,12 @@ lval *lval_clone(lval *v) {
         return new_lval_err(v->err);
     case LVAL_SYM:
         return new_lval_sym(v->sym);
+    case LVAL_QEXPR: {
+        lval *x = new_lval_qexpr();
+        for (int i = 0; i < v->count; i++)
+            lval_add(x, lval_clone(v->cell[i]));
+        return x;
+    }
     case LVAL_SEXPR: {
         lval *x = new_lval_sexpr();
         for (int i = 0; i < v->count; i++)
@@ -136,7 +158,7 @@ lval *lval_add(lval *v, lval *c) {
     return v;
 }
 
-void lval_print_sexpr(lval *v, char start, char end) {
+void lval_print_expr(lval *v, char start, char end) {
     putchar(start);
     for (int i = 0; i < v->count; i++) {
         lval_print(v->cell[i]);
@@ -161,7 +183,10 @@ void lval_print(lval *v) {
         break;
 
     case LVAL_SEXPR:
-        lval_print_sexpr(v, '(', ')');
+        lval_print_expr(v, '(', ')');
+        break;
+    case LVAL_QEXPR:
+        lval_print_expr(v, '{', '}');
         break;
     }
 }
@@ -199,6 +224,18 @@ cleanup:
     lval_del(v);
     return result;
 }
+lval *eval_qexpr(lval *v) {
+    for (int i = 0; i < v->count; i++) {
+        v->cell[i] = eval(v->cell[i]);
+
+        if (v->cell[i]->type == LVAL_ERR) {
+            lval *e = lval_clone(v->cell[i]);
+            lval_del(v);
+            return e;
+        }
+    }
+    return v;
+}
 
 lval *builtin_op(lval *v, char *op) {
     for (int i = 1; i < v->count; i++)
@@ -211,7 +248,7 @@ lval *builtin_op(lval *v, char *op) {
     double x = v->cell[1]->num;
 
     int i = 2;
-    // nagation
+    // negation
     if (strcmp(op, "-") == 0 && i == v->count)
         x = -x;
 
@@ -270,21 +307,23 @@ lval *lval_read(mpc_ast_t *t) {
         return new_lval_sym(t->contents);
 
     lval *x = NULL;
-    if (strstr(t->tag, ">"))
+    if (strstr(t->tag, "sexpr"))
         x = new_lval_sexpr();
-    else if (strstr(t->tag, "sexpr"))
+    else if (strstr(t->tag, "qexpr"))
+        x = new_lval_qexpr();
+    else if (strstr(t->tag, ">"))
         x = new_lval_sexpr();
 
     for (int i = 0; i < t->children_num; i++) {
         if ((strcmp(t->children[i]->contents, "(") == 0) ||
             (strcmp(t->children[i]->contents, ")") == 0) ||
+            (strcmp(t->children[i]->contents, "{") == 0) ||
+            (strcmp(t->children[i]->contents, "}") == 0) ||
             (strcmp(t->children[i]->tag, "regex") == 0))
             continue;
 
         x = lval_add(x, lval_read(t->children[i]));
     }
-    if (x == NULL) {
-        x = new_lval_sexpr();
-    }
+
     return x;
 }
