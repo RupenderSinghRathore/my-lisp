@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <editline/readline.h>
 #include <errno.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,13 +24,14 @@ Grammer *create_lisp_grammer(void) {
     g->expr = mpc_new("expr");
     g->my_lisp = mpc_new("my_lisp");
 
-    mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "    \
-    number   : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;    \
-    symbol : '+' | '-' | '*' | '/' | '%' | '^' | \"max\" | \"min\" ;     \
-    sexpr     : '(' <expr>* ')' ;                      \
-    qexpr     : '{' <expr>* '}' ;                      \
-    expr     : <number> | <symbol> | <sexpr> | <qexpr> ; \
-    my_lisp    : /^/ <expr>* /$/ ;          \
+    mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "                     \
+    number   : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;                     \
+    symbol : '+' | '-' | '*' | '/' | '%' | '^' | \"max\" | \"min\"      \
+           | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ;     \
+    sexpr     : '(' <expr>* ')' ;                                       \
+    qexpr     : '{' <expr>* '}' ;                                       \
+    expr     : <number> | <symbol> | <sexpr> | <qexpr> ;                \
+    my_lisp    : /^/ <expr>* /$/ ;                                      \
     ",
                                g->number, g->symbol, g->sexpr, g->qexpr,
                                g->expr, g->my_lisp);
@@ -67,7 +67,7 @@ lval *new_lval_num(double num) {
     v->type = LVAL_NUM;
     return v;
 }
-lval *new_lval_err(char *e) {
+lval *new_lval_err(const char *e) {
     lval *v = malloc(sizeof(*v));
 
     v->err = malloc(strlen(e) + 1);
@@ -76,12 +76,10 @@ lval *new_lval_err(char *e) {
     v->type = LVAL_ERR;
     return v;
 }
-lval *new_lval_sym(char *s) {
+lval *new_lval_op(char *s) {
     lval *v = malloc(sizeof(*v));
 
-    v->sym = malloc(strlen(s) + 1);
-    strcpy(v->sym, s);
-
+    v->op = ops_mapper(s);
     v->type = LVAL_SYM;
     return v;
 }
@@ -109,7 +107,8 @@ void lval_del(lval *v) {
         free(v->err);
         break;
     case LVAL_SYM:
-        free(v->sym);
+        free(v->op->sym);
+        free(v->op);
         break;
     case LVAL_SEXPR:
     case LVAL_QEXPR:
@@ -128,7 +127,7 @@ lval *lval_clone(lval *v) {
     case LVAL_ERR:
         return new_lval_err(v->err);
     case LVAL_SYM:
-        return new_lval_sym(v->sym);
+        return new_lval_op(v->op->sym);
 
     case LVAL_SEXPR:
     case LVAL_QEXPR: {
@@ -170,7 +169,7 @@ void lval_print(lval *v) {
         break;
 
     case LVAL_SYM:
-        printf("%s", v->sym);
+        printf("%s", v->op->sym);
         break;
 
     case LVAL_SEXPR:
@@ -209,7 +208,7 @@ lval *eval_sexpr(lval *v) {
         goto cleanup;
     }
 
-    result = builtin_op(v, x->sym);
+    result = builtin_op(v, x->op);
 
 cleanup:
     lval_del(v);
@@ -228,54 +227,15 @@ lval *eval_qexpr(lval *v) {
     return v;
 }
 
-lval *builtin_op(lval *v, char *op) {
+lval *builtin_op(lval *v, Operator *op) {
+    if (v->count < 2)
+        return new_lval_err("not enough operands");
+
     for (int i = 1; i < v->count; i++)
         if (v->cell[i]->type != LVAL_NUM)
             return new_lval_err("operands must be a number!");
 
-    if (v->count < 2)
-        return new_lval_err("not enough operands");
-
-    double x = v->cell[1]->num;
-
-    int i = 2;
-    // negation
-    if (strcmp(op, "-") == 0 && i == v->count)
-        x = -x;
-
-    for (; i < v->count; i++) {
-        double y = v->cell[i]->num;
-
-        if (strcmp(op, "+") == 0)
-            x = x + y;
-
-        else if (strcmp(op, "-") == 0)
-            x = x - y;
-
-        else if (strcmp(op, "*") == 0)
-            x = x * y;
-
-        else if (strcmp(op, "/") == 0) {
-            if (y == 0)
-                return new_lval_err("can't divide by zero!");
-            x = x / y;
-        } else if (strcmp(op, "%") == 0) {
-            if (y == 0)
-                return new_lval_err("can't divide by zero!");
-            x = fmod(x, y);
-        } else if (strcmp(op, "^") == 0)
-            x = pow(x, y);
-
-        else if (strcmp(op, "max") == 0)
-            x = x > y ? x : y;
-
-        else if (strcmp(op, "min") == 0)
-            x = x < y ? x : y;
-
-        else
-            return new_lval_err("unknown symbol");
-    }
-    return new_lval_num(x);
+    return op->eval(v);
 }
 
 lval *eval(lval *v) {
@@ -295,7 +255,7 @@ lval *lval_read(mpc_ast_t *t) {
     if (strstr(t->tag, "number"))
         return lval_read_number(t);
     if (strstr(t->tag, "symbol"))
-        return new_lval_sym(t->contents);
+        return new_lval_op(t->contents);
 
     lval *x = NULL;
     if (strstr(t->tag, "sexpr"))
