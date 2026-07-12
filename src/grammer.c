@@ -63,44 +63,39 @@ void lval_type_print(lval_type t) {
 }
 
 lval *new_lval_num(double num) {
-    lval *l;
-    l = malloc(sizeof(*l));
-    l->num = num;
-    l->type = LVAL_NUM;
-    return l;
+    lval *v = malloc(sizeof(*v));
+    v->num = num;
+    v->type = LVAL_NUM;
+    return v;
 }
 lval *new_lval_err(char *e) {
-    lval *l;
-    l = malloc(sizeof(*l));
+    lval *v = malloc(sizeof(*v));
 
-    l->err = malloc(strlen(e) + 1);
-    strcpy(l->err, e);
+    v->err = malloc(strlen(e) + 1);
+    strcpy(v->err, e);
 
-    l->type = LVAL_ERR;
-    return l;
+    v->type = LVAL_ERR;
+    return v;
 }
 lval *new_lval_sym(char *s) {
-    lval *l;
-    l = malloc(sizeof(*l));
+    lval *v = malloc(sizeof(*v));
 
-    l->sym = malloc(strlen(s) + 1);
-    strcpy(l->sym, s);
+    v->sym = malloc(strlen(s) + 1);
+    strcpy(v->sym, s);
 
-    l->type = LVAL_SYM;
-    return l;
+    v->type = LVAL_SYM;
+    return v;
 }
 
 lval *new_lval_sexpr(void) {
-    lval *l;
-    l = malloc(sizeof(*l));
-    l->count = 0;
-    l->type = LVAL_SEXPR;
-    l->cell = NULL;
-    return l;
+    lval *v = malloc(sizeof(*v));
+    v->count = 0;
+    v->type = LVAL_SEXPR;
+    v->cell = NULL;
+    return v;
 }
 lval *new_lval_qexpr(void) {
-    lval *l;
-    l = malloc(sizeof(*l));
+    lval *l = malloc(sizeof(*l));
     l->count = 0;
     l->type = LVAL_QEXPR;
     l->cell = NULL;
