@@ -16,8 +16,7 @@ void clean_grammer(Grammer *g) {
 }
 
 Grammer *create_lisp_grammer(void) {
-    Grammer *g;
-    g = malloc(sizeof(*g));
+    Grammer *g = malloc(sizeof(*g));
 
     g->number = mpc_new("number");
     g->symbol = mpc_new("symbol");
