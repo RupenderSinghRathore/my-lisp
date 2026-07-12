@@ -23,7 +23,7 @@ typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
 typedef struct lval lval;
 
-typedef lval *(*eval_op)(lval *v);
+typedef lval *(*eval_op)(lval **operands, int n);
 typedef struct {
     char *sym;
     eval_op eval;

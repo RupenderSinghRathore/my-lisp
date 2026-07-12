@@ -235,7 +235,8 @@ lval *builtin_op(lval *v, Operator *op) {
         if (v->cell[i]->type != LVAL_NUM)
             return new_lval_err("operands must be a number!");
 
-    return op->eval(v);
+    lval **operands = v->cell + 1;
+    return op->eval(operands, v->count-1);
 }
 
 lval *eval(lval *v) {
