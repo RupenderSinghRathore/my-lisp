@@ -129,14 +129,11 @@ lval *lval_clone(lval *v) {
         return new_lval_err(v->err);
     case LVAL_SYM:
         return new_lval_sym(v->sym);
+
+    case LVAL_SEXPR:
     case LVAL_QEXPR: {
         lval *x = new_lval_qexpr();
-        for (int i = 0; i < v->count; i++)
-            lval_add(x, lval_clone(v->cell[i]));
-        return x;
-    }
-    case LVAL_SEXPR: {
-        lval *x = new_lval_sexpr();
+        x->type = v->type;
         for (int i = 0; i < v->count; i++)
             lval_add(x, lval_clone(v->cell[i]));
         return x;
