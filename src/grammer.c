@@ -94,11 +94,11 @@ lval *new_lval_sexpr(void) {
     return v;
 }
 lval *new_lval_qexpr(void) {
-    lval *l = malloc(sizeof(*l));
-    l->count = 0;
-    l->type = LVAL_QEXPR;
-    l->cell = NULL;
-    return l;
+    lval *v = malloc(sizeof(*v));
+    v->count = 0;
+    v->type = LVAL_QEXPR;
+    v->cell = NULL;
+    return v;
 }
 
 void lval_del(lval *v) {
