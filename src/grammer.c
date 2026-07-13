@@ -231,12 +231,8 @@ lval *builtin_op(lval *v, Operator *op) {
     if (v->count < 2)
         return new_lval_err("not enough operands");
 
-    for (int i = 1; i < v->count; i++)
-        if (v->cell[i]->type != LVAL_NUM)
-            return new_lval_err("operands must be a number!");
-
     lval **operands = v->cell + 1;
-    return op->eval(operands, v->count-1);
+    return op->eval(operands, v->count - 1);
 }
 
 lval *eval(lval *v) {

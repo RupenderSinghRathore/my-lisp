@@ -63,3 +63,6 @@ lval *lval_read(mpc_ast_t *tree);
 lval *builtin_op(lval *v, Operator *s);
 
 Operator *ops_mapper(const char *sym);
+
+lval *must_be_number(lval **operands, int n);
+lval *must_be_qexpr(lval **operands, int n);
