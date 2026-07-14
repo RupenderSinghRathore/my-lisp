@@ -1,4 +1,4 @@
-#include "grammer.h"
+#include "my_lisp.h"
 #include <stdlib.h>
 
 // create new list
@@ -11,6 +11,9 @@ list *new_list(void) {
 
 // free up list
 void list_del(list *l) {
+    if (!l)
+        return;
+
     for (int i = 0; i < l->len; i++) {
         lval_del(l->arr[i]);
     }
@@ -39,11 +42,22 @@ lval *list_take(list *l, int i) {
     return x;
 }
 
+lval *list_pop_left(list *l) {
+    if (l->len == 0)
+        NULL;
+    return list_take(l, 0);
+}
+lval *list_pop(list *l) {
+    if (l->len == 0)
+        NULL;
+    return list_take(l, l->len - 1);
+}
+
 // clones the list
 list *list_clone(list *l) {
-    list *new = new_list();
+    list *n = new_list();
     for (int i = 0; i < l->len; i++) {
-        list_push(new, lval_clone(l->arr[i]));
+        list_push(n, lval_clone(l->arr[i]));
     }
-    return new;
+    return n;
 }

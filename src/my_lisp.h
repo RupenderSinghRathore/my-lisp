@@ -32,6 +32,8 @@ list *new_list(void);
 void list_del(list *l);
 void list_push(list *l, lval *v);
 lval *list_take(list *l, int i);
+lval *list_pop_left(list *l);
+lval *list_pop(list *l);
 list *list_clone(list *l);
 
 typedef lval *(*eval_op)(list *operands);
@@ -54,7 +56,6 @@ struct lval {
 lval *new_lval_num(double num);
 lval *new_lval_err(const char *err);
 lval *new_lval_op(char *sym);
-lval *new_lval_expr(void);
 lval *new_lval_sexpr(void);
 lval *new_lval_qexpr(void);
 
@@ -66,8 +67,6 @@ void lval_print_ln(lval *v);
 void lval_print_expr(lval *v, char start, char end);
 
 lval *eval(lval *v);
-lval *eval_sexpr(lval *v);
-lval *eval_qexpr(lval *v);
 lval *lval_read(mpc_ast_t *tree);
 lval *builtin_op(lval *v, Operator *s);
 
