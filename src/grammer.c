@@ -86,16 +86,14 @@ lval *new_lval_op(char *s) {
 
 lval *new_lval_sexpr(void) {
     lval *v = malloc(sizeof(*v));
-    v->count = 0;
     v->type = LVAL_SEXPR;
-    v->cell = NULL;
+    v->cell = new_list();
     return v;
 }
 lval *new_lval_qexpr(void) {
     lval *v = malloc(sizeof(*v));
-    v->count = 0;
     v->type = LVAL_QEXPR;
-    v->cell = NULL;
+    v->cell = new_list();
     return v;
 }
 
@@ -112,9 +110,7 @@ void lval_del(lval *v) {
         break;
     case LVAL_SEXPR:
     case LVAL_QEXPR:
-        for (int i = 0; i < v->count; i++)
-            lval_del(v->cell[i]);
-        free(v->cell);
+        list_del(v->cell);
         break;
     }
     free(v);
@@ -133,26 +129,19 @@ lval *lval_clone(lval *v) {
     case LVAL_QEXPR: {
         lval *x = new_lval_qexpr();
         x->type = v->type;
-        for (int i = 0; i < v->count; i++)
-            lval_add(x, lval_clone(v->cell[i]));
+        for (int i = 0; i < v->cell->len; i++)
+            list_push(x->cell, lval_clone(v->cell->arr[i]));
         return x;
     }
     }
     return NULL;
 }
 
-lval *lval_add(lval *v, lval *c) {
-    v->count++;
-    v->cell = realloc(v->cell, sizeof(void *) * v->count);
-    v->cell[v->count - 1] = c;
-    return v;
-}
-
 void lval_print_expr(lval *v, char start, char end) {
     putchar(start);
-    for (int i = 0; i < v->count; i++) {
-        lval_print(v->cell[i]);
-        if (i != v->count - 1)
+    for (int i = 0; i < v->cell->len; i++) {
+        lval_print(v->cell->arr[i]);
+        if (i != v->cell->len - 1)
             putchar(' ');
     }
     putchar(end);
@@ -187,52 +176,34 @@ void lval_print_ln(lval *v) {
 
 lval *eval_sexpr(lval *v) {
     lval *result = NULL;
-    for (int i = 0; i < v->count; i++) {
-        v->cell[i] = eval(v->cell[i]);
+    list *cell = v->cell;
+    for (int i = 0; i < cell->len; i++) {
+        cell->arr[i] = eval(v->cell->arr[i]);
 
-        if (v->cell[i]->type == LVAL_ERR) {
-            result = lval_clone(v->cell[i]);
+        if (cell->arr[i]->type == LVAL_ERR) {
+            result = list_take(cell, i);
             goto cleanup;
         }
     }
-    if (v->count == 0)
+    if (cell->len == 0)
         return v;
-    else if (v->count == 1) {
-        result = lval_clone(v->cell[0]);
+    else if (cell->len == 1) {
+        result = list_take(cell, 0);
         goto cleanup;
     }
 
-    lval *x = v->cell[0];
+    lval *x = list_take(cell, 0);
     if (x->type != LVAL_SYM) {
         result = new_lval_err("s-expression does not start with a symbol!");
         goto cleanup;
     }
 
-    result = builtin_op(v, x->op);
+    result = x->op->eval(cell);
+    lval_del(x);
 
 cleanup:
     lval_del(v);
     return result;
-}
-lval *eval_qexpr(lval *v) {
-    for (int i = 0; i < v->count; i++) {
-        v->cell[i] = eval(v->cell[i]);
-
-        if (v->cell[i]->type == LVAL_ERR) {
-            lval *e = lval_clone(v->cell[i]);
-            lval_del(v);
-            return e;
-        }
-    }
-    return v;
-}
-
-lval *builtin_op(lval *v, Operator *op) {
-    if (v->count < 2)
-        return new_lval_err("not enough operands");
-
-    lval **operands = v->cell + 1;
-    return op->eval(operands, v->count - 1);
 }
 
 lval *eval(lval *v) {
@@ -270,7 +241,7 @@ lval *lval_read(mpc_ast_t *t) {
             (strcmp(t->children[i]->tag, "regex") == 0))
             continue;
 
-        x = lval_add(x, lval_read(t->children[i]));
+        list_push(x->cell, lval_read(t->children[i]));
     }
 
     return x;

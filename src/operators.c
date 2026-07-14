@@ -5,68 +5,66 @@
 
 const char *ERR_DIV_BY_ZERO = "can't divide by zero!";
 
-lval *must_be_number(lval **operands, int n) {
-    for (int i = 1; i < n; i++)
-        if (operands[i]->type != LVAL_NUM)
+lval *must_be_number(list *operands) {
+    for (int i = 1; i < operands->len; i++)
+        if (operands->arr[i]->type != LVAL_NUM)
             return new_lval_err("function must be passed a number!");
     return NULL;
 }
-lval *must_be_qexpr(lval **operands, int n) {
-    lval *x = operands[0];
-    for (int i = 0; i < n; i++)
-        if (x->type != LVAL_QEXPR)
+lval *must_be_qexpr(list *operands) {
+    for (int i = 0; i < operands->len; i++)
+        if (operands->arr[i]->type != LVAL_QEXPR)
             return new_lval_err("function must be passed a q-expression!");
     return NULL;
 }
 
-lval *op_add(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_add(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         x += y;
     }
     return new_lval_num(x);
 }
-lval *op_sub(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_sub(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
+    double x = operands->arr[0]->num;
 
-    if (n == 1)
+    if (operands->len == 1)
         x = -x;
-
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         x -= y;
     }
     return new_lval_num(x);
 }
-lval *op_mul(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_mul(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         x *= y;
     }
     return new_lval_num(x);
 }
-lval *op_div(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_div(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         if (y == 0)
             return new_lval_err(ERR_DIV_BY_ZERO);
         x /= y;
@@ -74,123 +72,121 @@ lval *op_div(lval **operands, int n) {
     return new_lval_num(x);
 }
 
-lval *op_mod(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_mod(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         if (y == 0)
             return new_lval_err(ERR_DIV_BY_ZERO);
         x = fmod(x, y);
     }
     return new_lval_num(x);
 }
-lval *op_pow(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_pow(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         x = pow(x, y);
     }
     return new_lval_num(x);
 }
-lval *op_max(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_max(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         x = x > y ? x : y;
     }
     return new_lval_num(x);
 }
-lval *op_min(lval **operands, int n) {
-    lval *e = must_be_number(operands, n);
+lval *op_min(list *operands) {
+    lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = operands[0]->num;
-    for (int i = 1; i < n; i++) {
-        double y = operands[i]->num;
+    double x = operands->arr[0]->num;
+    for (int i = 1; i < operands->len; i++) {
+        double y = operands->arr[i]->num;
         x = x < y ? x : y;
     }
     return new_lval_num(x);
 }
 
-lval *op_head(lval **operands, int n) {
-    if (n != 1)
+lval *op_head(list *operands) {
+    if (operands->len != 1)
         return new_lval_err("function head passed too many args!");
 
-    lval *e = must_be_qexpr(operands, n);
+    lval *e = must_be_qexpr(operands);
     if (e)
         return e;
 
-    lval *x = operands[0];
-    if (x->count == 1)
+    lval *x = operands->arr[0];
+    if (x->cell->len == 0)
         return new_lval_err("function head passed {}!");
 
     lval *q = new_lval_qexpr();
-    lval_add(q, lval_clone(x->cell[0]));
+    list_push(q->cell, list_take(x->cell, 0));
     return q;
 }
-lval *op_tail(lval **operands, int n) {
-    if (n != 1)
+lval *op_tail(list *operands) {
+    if (operands->len != 1)
         return new_lval_err("function tail passed too many args!");
 
-    lval *e = must_be_qexpr(operands, n);
+    lval *e = must_be_qexpr(operands);
     if (e)
         return e;
 
-    lval *x = operands[0];
-    if (x->count == 1)
-        return new_lval_err("function head passed {}!");
+    lval *x = operands->arr[0];
+    if (x->cell->len == 0)
+        return new_lval_err("function tail passed {}!");
 
     lval *q = new_lval_qexpr();
-    for (int i = 1; i < x->count; i++)
-        lval_add(q, lval_clone(x->cell[i]));
+    while (x->cell->len > 1)
+        list_push(q->cell, list_take(x->cell, 1));
 
     return q;
 }
-lval *op_list(lval **operands, int n) {
+lval *op_list(list *operands) {
     lval *x = new_lval_qexpr();
-    for (int i = 0; i < n; i++)
-        lval_add(x, lval_clone(operands[i]));
+    while (operands->len > 0)
+        list_push(x->cell, list_take(operands, 0));
     return x;
 }
-lval *op_eval(lval **operands, int n) {
-    if (n != 1)
+lval *op_eval(list *operands) {
+    if (operands->len != 1)
         return new_lval_err("function tail passed too many args!");
 
-    lval *e = must_be_qexpr(operands, n);
+    lval *e = must_be_qexpr(operands);
     if (e)
         return e;
 
     lval *x = new_lval_qexpr();
 
-    lval_add(x, eval_sexpr(lval_clone(operands[0])));
+    list_push(x->cell, eval_sexpr(list_take(operands, 0)));
     return x;
 }
-lval *op_join(lval **operands, int n) {
-    lval *e = must_be_qexpr(operands, n);
+lval *op_join(list *operands) {
+    lval *e = must_be_qexpr(operands);
     if (e)
         return e;
 
     lval *x = new_lval_qexpr();
-    for (int i = 0; i < n; i++) {
-        lval *curr = operands[i];
-        for (int i = 0; i < curr->count; i++) {
-            lval_add(x, lval_clone(curr->cell[i]));
-        }
+    for (int i = 0; i < operands->len; i++) {
+        lval *curr = operands->arr[i];
+        while (curr->cell->len > 0)
+            list_push(x->cell, list_take(curr->cell, 0));
     }
-
     return x;
 }
 

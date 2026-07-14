@@ -23,7 +23,18 @@ typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
 typedef struct lval lval;
 
-typedef lval *(*eval_op)(lval **operands, int n);
+typedef struct {
+    int len;
+    lval **arr;
+} list;
+
+list *new_list(void);
+void list_del(list *l);
+void list_push(list *l, lval *v);
+lval *list_take(list *l, int i);
+list *list_clone(list *l);
+
+typedef lval *(*eval_op)(list *operands);
 typedef struct {
     char *sym;
     eval_op eval;
@@ -31,13 +42,12 @@ typedef struct {
 
 struct lval {
     lval_type type;
-    int count;
 
     union {
         double num;
         char *err;
         Operator *op;
-        struct lval **cell;
+        list *cell;
     };
 };
 
@@ -48,7 +58,6 @@ lval *new_lval_expr(void);
 lval *new_lval_sexpr(void);
 lval *new_lval_qexpr(void);
 
-lval *lval_add(lval *v, lval *c);
 lval *lval_clone(lval *v);
 void lval_del(lval *v);
 
@@ -63,6 +72,3 @@ lval *lval_read(mpc_ast_t *tree);
 lval *builtin_op(lval *v, Operator *s);
 
 Operator *ops_mapper(const char *sym);
-
-lval *must_be_number(lval **operands, int n);
-lval *must_be_qexpr(lval **operands, int n);
