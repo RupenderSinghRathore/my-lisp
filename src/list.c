@@ -1,5 +1,6 @@
-#include "my_lisp.h"
+#include "list.h"
 #include <stdlib.h>
+#include <string.h>
 
 // create new list
 list *new_list(void) {
@@ -30,8 +31,8 @@ void list_push(list *l, void *v) {
 }
 
 // takes ownership of ith lval and returns it
-lval *list_take(list *l, int i) {
-    lval *x = l->arr[i];
+void *list_take(list *l, int i) {
+    void *x = l->arr[i];
 
     int elements_to_move = l->len - i - 1;
     if (elements_to_move != 0)
@@ -43,12 +44,12 @@ lval *list_take(list *l, int i) {
     return x;
 }
 
-lval *list_pop_left(list *l) {
+void *list_pop_left(list *l) {
     if (l->len == 0)
         NULL;
     return list_take(l, 0);
 }
-lval *list_pop(list *l) {
+void *list_pop(list *l) {
     if (l->len == 0)
         NULL;
     return list_take(l, l->len - 1);

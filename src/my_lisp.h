@@ -1,3 +1,4 @@
+#include "list.h"
 #include "mpc.h"
 #include <assert.h>
 #include <editline/readline.h>
@@ -29,21 +30,6 @@ void lval_type_print(lval_type t);
 typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
 typedef struct lval lval;
-
-typedef void (*list_ele_del)(void *);
-typedef void *(*list_ele_clone)(void *);
-typedef struct {
-    int len;
-    void **arr;
-} list;
-
-list *new_list(void);
-void list_del(list *l, list_ele_del del);
-void list_push(list *l, void *v);
-lval *list_take(list *l, int i);
-lval *list_pop_left(list *l);
-lval *list_pop(list *l);
-list *list_clone(list *l, list_ele_clone clone);
 
 typedef lval *(*builtin_f)(list *operands);
 typedef struct {
