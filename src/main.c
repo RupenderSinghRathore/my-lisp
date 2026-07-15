@@ -1,5 +1,5 @@
-#include "my_lisp.h"
 #include "mpc.h"
+#include "my_lisp.h"
 #include <assert.h>
 #include <editline/readline.h>
 #include <stdbool.h>
@@ -10,6 +10,8 @@
 int main(void) {
 
     Grammer *grammer = create_lisp_grammer();
+    list *f_map = new_func_list();
+    add_builtin_funcs(f_map);
 
     puts("my-lisp Version 0.001");
 
@@ -32,7 +34,7 @@ int main(void) {
             // mpc_ast_print(r.output);
             lval *l = lval_read(r.output);
             // lval_type_print(l->type);
-            l = eval(l);
+            l = eval(f_map, l);
             lval_print_ln(l);
 
             lval_del(l);
@@ -48,5 +50,6 @@ int main(void) {
     }
 
     clean_grammer(grammer);
+    func_list_del(f_map);
     return 0;
 }

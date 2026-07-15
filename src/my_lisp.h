@@ -31,16 +31,20 @@ typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
 typedef struct lval lval;
 
-typedef lval *(*builtin_f)(list *operands);
+typedef lval *(*builtin_f)(list *f, list *operands);
 typedef struct {
-    char *str;
-    builtin_f eval;
-} builtin;
+    char *sym;
+    builtin_f func;
+} func_map;
 
-builtin *new_builtin(void);
+list *new_func_list(void);
+void func_list_del(list *l);
+void func_del(void *v);
+void add_builtin_funcs(list *l);
+void func_add(list *l, char *sym, builtin_f func);
 
-builtin *ops_mapper(const char *sym);
-void operator_del(builtin *op);
+lval *ops_mapper(list *f, lval *v);
+void operator_del(func_map *op);
 
 struct lval {
     lval_type type;
@@ -68,6 +72,6 @@ void lval_print(lval *v);
 void lval_print_ln(lval *v);
 void lval_print_expr(lval *v, char start, char end);
 
-lval *eval(lval *v);
+lval *eval(list *f, lval *v);
 lval *lval_read(mpc_ast_t *tree);
-lval *builtin_op(lval *v, builtin *s);
+lval *builtin_op(lval *v, func_map *s);

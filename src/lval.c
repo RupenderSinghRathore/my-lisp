@@ -74,7 +74,8 @@ lval *new_lval_qexpr(void) {
     return v;
 }
 
-void del(lval *v) {
+void lval_del(void *g) {
+    lval *v = g;
     if (!v)
         return;
     switch (v->type) {
@@ -95,9 +96,9 @@ void del(lval *v) {
     }
     free(v);
 }
-void lval_del(void *p) { del(p); }
 
-lval *clone(lval *v) {
+void *lval_clone(void *g) {
+    lval *v = g;
     switch (v->type) {
     case LVAL_NUM:
         return new_lval_num(v->num);
@@ -118,7 +119,6 @@ lval *clone(lval *v) {
     }
     return NULL;
 }
-void *lval_clone(void *v) { return clone(v); }
 
 void lval_print_expr(lval *v, char start, char end) {
     putchar(start);
@@ -161,14 +161,13 @@ void lval_print_ln(lval *v) {
     putchar('\n');
 }
 
-lval *eval_sexpr(lval *v) {
+lval *eval_sexpr(list *f, lval *v) {
     lval *result = NULL;
     lval *x = NULL;
-    builtin *op = NULL;
 
     list *cell = v->cell;
     for (int i = 0; i < cell->len; i++) {
-        cell->arr[i] = eval(cell->arr[i]);
+        cell->arr[i] = eval(f, cell->arr[i]);
 
         if (((lval *)cell->arr[i])->type == LVAL_ERR) {
             result = list_take(cell, i);
@@ -183,31 +182,30 @@ lval *eval_sexpr(lval *v) {
     }
 
     x = list_take(cell, 0);
-    if (x->type != LVAL_SYM) {
-        result = new_lval_err("s-expression does not start with a symbol!");
+    if (x->type != LVAL_FUNC) {
+        result = new_lval_err("s-expression does not start with a function!");
         goto cleanup;
     }
-
-    op = ops_mapper(x->sym);
-    if (!op) {
-        result = new_lval_err("unknown symbol!");
-        goto cleanup;
-    }
-    result = op->eval(cell);
+    result = x->func(f, cell);
 
 cleanup:
-    // NOTE: don't clean up when returned a reference
-    operator_del(op);
-
     lval_del(x);
     lval_del(v);
     return result;
 }
 
-lval *eval(lval *v) {
-    if (v->type == LVAL_SEXPR)
-        return eval_sexpr(v);
-    return v;
+lval *eval(list *f, lval *v) {
+    switch (v->type) {
+    case LVAL_SYM: {
+        lval *e = ops_mapper(f, v);
+        lval_del(v);
+        return e;
+    }
+    case LVAL_SEXPR:
+        return eval_sexpr(f, v);
+    default:
+        return v;
+    }
 }
 
 lval *lval_read_number(mpc_ast_t *t) {
