@@ -43,10 +43,10 @@ lval *new_lval_err(const char *e) {
     v->type = LVAL_ERR;
     return v;
 }
-lval *new_lval_op(char *s) {
+lval *new_lval_symbol(char *s) {
     lval *v = malloc(sizeof(*v));
 
-    v->op = ops_mapper(s);
+    v->sym = strdup(s);
     v->type = LVAL_SYM;
     return v;
 }
@@ -72,8 +72,7 @@ void lval_del(lval *v) {
         free(v->err);
         break;
     case LVAL_SYM:
-        free(v->op->sym);
-        free(v->op);
+        free(v->sym);
         break;
     case LVAL_SEXPR:
     case LVAL_QEXPR:
@@ -90,7 +89,7 @@ lval *lval_clone(lval *v) {
     case LVAL_ERR:
         return new_lval_err(v->err);
     case LVAL_SYM:
-        return new_lval_op(v->op->sym);
+        return new_lval_symbol(v->sym);
 
     case LVAL_SEXPR:
     case LVAL_QEXPR: {
@@ -124,7 +123,7 @@ void lval_print(lval *v) {
         break;
 
     case LVAL_SYM:
-        printf("%s", v->op->sym);
+        printf("%s", v->sym);
         break;
 
     case LVAL_SEXPR:
@@ -164,8 +163,15 @@ lval *eval_sexpr(lval *v) {
         goto cleanup;
     }
 
-    result = x->op->eval(cell);
+    Operator *op = ops_mapper(x->sym);
     lval_del(x);
+
+    if (!op) {
+        result = new_lval_err("unknown symbol!");
+        goto cleanup;
+    }
+    result = op->eval(cell);
+    operator_del(op);
 
 cleanup:
     lval_del(v);
@@ -189,7 +195,7 @@ lval *lval_read(mpc_ast_t *t) {
     if (strstr(t->tag, "number"))
         return lval_read_number(t);
     if (strstr(t->tag, "symbol"))
-        return new_lval_op(t->contents);
+        return new_lval_symbol(t->contents);
 
     lval *x = NULL;
     if (strstr(t->tag, "sexpr"))

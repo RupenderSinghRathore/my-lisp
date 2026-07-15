@@ -173,12 +173,18 @@ Operator ops[] = {
 Operator *ops_mapper(const char *sym) {
     int n = sizeof(ops) / sizeof(Operator);
     for (int i = 0; i < n; i++) {
-        if (strcmp(ops[i].sym, sym) == 0) {
+        if (strcmp(ops[i].str, sym) == 0) {
             Operator *o = malloc(sizeof(*o));
-            o->sym = strdup(sym);
+            o->str = strdup(sym);
             o->eval = ops[i].eval;
             return o;
         }
     }
     return NULL;
+}
+
+void operator_del(Operator *op) {
+    if (op)
+        free(op->str);
+    free(op);
 }

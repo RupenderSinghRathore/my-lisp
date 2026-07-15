@@ -38,9 +38,11 @@ list *list_clone(list *l);
 
 typedef lval *(*eval_op)(list *operands);
 typedef struct {
-    char *sym;
+    char *str;
     eval_op eval;
 } Operator;
+Operator *ops_mapper(const char *sym);
+void operator_del(Operator *op);
 
 struct lval {
     lval_type type;
@@ -48,14 +50,14 @@ struct lval {
     union {
         double num;
         char *err;
-        Operator *op;
+        char *sym;
         list *cell;
     };
 };
 
 lval *new_lval_num(double num);
 lval *new_lval_err(const char *err);
-lval *new_lval_op(char *sym);
+lval *new_lval_symbol(char *sym);
 lval *new_lval_sexpr(void);
 lval *new_lval_qexpr(void);
 
@@ -69,5 +71,3 @@ void lval_print_expr(lval *v, char start, char end);
 lval *eval(lval *v);
 lval *lval_read(mpc_ast_t *tree);
 lval *builtin_op(lval *v, Operator *s);
-
-Operator *ops_mapper(const char *sym);

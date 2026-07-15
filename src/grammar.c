@@ -1,5 +1,5 @@
-#include "my_lisp.h"
 #include "mpc.h"
+#include "my_lisp.h"
 #include <assert.h>
 #include <editline/readline.h>
 #include <stdbool.h>
@@ -21,14 +21,13 @@ Grammer *create_lisp_grammer(void) {
     g->expr = mpc_new("expr");
     g->my_lisp = mpc_new("my_lisp");
 
-    mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "                     \
-    number   : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;                     \
-    symbol : '+' | '-' | '*' | '/' | '%' | '^' | \"max\" | \"min\"      \
-           | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ;     \
-    sexpr     : '(' <expr>* ')' ;                                       \
-    qexpr     : '{' <expr>* '}' ;                                       \
-    expr     : <number> | <symbol> | <sexpr> | <qexpr> ;                \
-    my_lisp    : /^/ <expr>* /$/ ;                                      \
+    mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "              \
+    number  : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;               \
+    symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ;                 \
+    sexpr   : '(' <expr>* ')' ;                                  \
+    qexpr   : '{' <expr>* '}' ;                                  \
+    expr    : <number> | <symbol> | <sexpr> | <qexpr> ;          \
+    my_lisp : /^/ <expr>* /$/ ;                                  \
     ",
                                g->number, g->symbol, g->sexpr, g->qexpr,
                                g->expr, g->my_lisp);
