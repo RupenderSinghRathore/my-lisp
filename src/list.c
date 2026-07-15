@@ -10,19 +10,20 @@ list *new_list(void) {
 }
 
 // free up list
-void list_del(list *l) {
+void list_del(list *l, list_ele_del del) {
     if (!l)
         return;
 
-    for (int i = 0; i < l->len; i++) {
-        lval_del(l->arr[i]);
-    }
+    if (del)
+        for (int i = 0; i < l->len; i++)
+            del(l->arr[i]);
+
     free(l->arr);
     free(l);
 }
 
 // append v to list
-void list_push(list *l, lval *v) {
+void list_push(list *l, void *v) {
     l->len++;
     l->arr = realloc(l->arr, sizeof(void *) * l->len);
     l->arr[l->len - 1] = v;
@@ -54,10 +55,13 @@ lval *list_pop(list *l) {
 }
 
 // clones the list
-list *list_clone(list *l) {
+list *list_clone(list *l, list_ele_clone clone) {
     list *n = new_list();
     for (int i = 0; i < l->len; i++) {
-        list_push(n, lval_clone(l->arr[i]));
+        if (clone)
+            list_push(n, clone(l->arr[i]));
+        else
+            list_push(n, l->arr[i]);
     }
     return n;
 }

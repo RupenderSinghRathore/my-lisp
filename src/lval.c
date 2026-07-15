@@ -11,21 +11,25 @@
 void lval_type_print(lval_type t) {
     switch (t) {
     case LVAL_NUM:
-        printf("lval_num\n");
+        printf("lval_num");
         break;
     case LVAL_SYM:
-        printf("lval_sym\n");
+        printf("lval_sym");
         break;
     case LVAL_SEXPR:
-        printf("lval_sexpr\n");
+        printf("lval_sexpr");
+        break;
+    case LVAL_FUNC:
+        printf("lval_func");
         break;
     case LVAL_QEXPR:
-        printf("lval_qexpr\n");
+        printf("lval_qexpr");
         break;
     case LVAL_ERR:
-        printf("lval_err\n");
+        printf("lval_err");
         break;
     }
+    putchar('\n');
 }
 
 lval *new_lval_num(double num) {
@@ -50,6 +54,12 @@ lval *new_lval_symbol(char *s) {
     v->type = LVAL_SYM;
     return v;
 }
+lval *new_lval_func(builtin_f f) {
+    lval *v = malloc(sizeof(*v));
+    v->type = LVAL_FUNC;
+    v->func = f;
+    return v;
+}
 
 lval *new_lval_sexpr(void) {
     lval *v = malloc(sizeof(*v));
@@ -64,7 +74,9 @@ lval *new_lval_qexpr(void) {
     return v;
 }
 
-void lval_del(lval *v) {
+void del(lval *v) {
+    if (!v)
+        return;
     switch (v->type) {
     case LVAL_NUM:
         break;
@@ -76,13 +88,16 @@ void lval_del(lval *v) {
         break;
     case LVAL_SEXPR:
     case LVAL_QEXPR:
-        list_del(v->cell);
+        list_del(v->cell, lval_del);
+        break;
+    case LVAL_FUNC:
         break;
     }
     free(v);
 }
+void lval_del(void *p) { del(p); }
 
-lval *lval_clone(lval *v) {
+lval *clone(lval *v) {
     switch (v->type) {
     case LVAL_NUM:
         return new_lval_num(v->num);
@@ -90,17 +105,20 @@ lval *lval_clone(lval *v) {
         return new_lval_err(v->err);
     case LVAL_SYM:
         return new_lval_symbol(v->sym);
+    case LVAL_FUNC:
+        return new_lval_func(v->func);
 
     case LVAL_SEXPR:
     case LVAL_QEXPR: {
         lval *x = new_lval_qexpr();
         x->type = v->type;
-        x->cell = list_clone(v->cell);
+        x->cell = list_clone(v->cell, lval_clone);
         return x;
     }
     }
     return NULL;
 }
+void *lval_clone(void *v) { return clone(v); }
 
 void lval_print_expr(lval *v, char start, char end) {
     putchar(start);
@@ -126,6 +144,10 @@ void lval_print(lval *v) {
         printf("%s", v->sym);
         break;
 
+    case LVAL_FUNC:
+        printf("<func>");
+        break;
+
     case LVAL_SEXPR:
         lval_print_expr(v, '(', ')');
         break;
@@ -141,11 +163,14 @@ void lval_print_ln(lval *v) {
 
 lval *eval_sexpr(lval *v) {
     lval *result = NULL;
+    lval *x = NULL;
+    builtin *op = NULL;
+
     list *cell = v->cell;
     for (int i = 0; i < cell->len; i++) {
-        cell->arr[i] = eval(v->cell->arr[i]);
+        cell->arr[i] = eval(cell->arr[i]);
 
-        if (cell->arr[i]->type == LVAL_ERR) {
+        if (((lval *)cell->arr[i])->type == LVAL_ERR) {
             result = list_take(cell, i);
             goto cleanup;
         }
@@ -157,23 +182,24 @@ lval *eval_sexpr(lval *v) {
         goto cleanup;
     }
 
-    lval *x = list_take(cell, 0);
+    x = list_take(cell, 0);
     if (x->type != LVAL_SYM) {
         result = new_lval_err("s-expression does not start with a symbol!");
         goto cleanup;
     }
 
-    Operator *op = ops_mapper(x->sym);
-    lval_del(x);
-
+    op = ops_mapper(x->sym);
     if (!op) {
         result = new_lval_err("unknown symbol!");
         goto cleanup;
     }
     result = op->eval(cell);
-    operator_del(op);
 
 cleanup:
+    // NOTE: don't clean up when returned a reference
+    operator_del(op);
+
+    lval_del(x);
     lval_del(v);
     return result;
 }

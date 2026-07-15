@@ -1,4 +1,5 @@
 #include "my_lisp.h"
+#include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,89 +10,64 @@ typedef double (*reduce_fn)(double a, double b, int i);
 
 lval *must_be_number(list *operands) {
     for (int i = 0; i < operands->len; i++)
-        if (operands->arr[i]->type != LVAL_NUM)
+        if (((lval *)operands->arr[i])->type != LVAL_NUM)
             return new_lval_err("function must be passed a number!");
     return NULL;
 }
 lval *must_be_qexpr(list *operands) {
     for (int i = 0; i < operands->len; i++)
-        if (operands->arr[i]->type != LVAL_QEXPR)
+        if (((lval *)operands->arr[i])->type != LVAL_QEXPR)
             return new_lval_err("function must be passed a q-expression!");
     return NULL;
 }
 
-lval *op_arith(list *operands, reduce_fn reducer, double initial) {
+lval *op_arith(list *operands, char *sym) {
+
+    assert(operands->len != 0);
+
     lval *e = must_be_number(operands);
     if (e)
         return e;
 
-    double x = initial;
-    for (int i = 0; i < operands->len; i++) {
-        double y = operands->arr[i]->num;
-        x = reducer(x, y, i);
-        if (isnan(x))
-            return new_lval_err(ERR_DIV_BY_ZERO);
+    double x = ((lval *)operands->arr[0])->num;
+
+    if (operands->len == 1 && strcmp(sym, "-") == 0)
+        return new_lval_num(-x);
+
+    for (int i = 1; i < operands->len; i++) {
+        double y = ((lval *)operands->arr[i])->num;
+        if (strcmp(sym, "+") == 0)
+            x += y;
+        else if (strcmp(sym, "-") == 0)
+            x -= y;
+        else if (strcmp(sym, "*") == 0)
+            x *= y;
+        else if (strcmp(sym, "/") == 0) {
+            if (y == 0)
+                return new_lval_err(ERR_DIV_BY_ZERO);
+            x /= y;
+        } else if (strcmp(sym, "%") == 0) {
+            if (y == 0)
+                return new_lval_err(ERR_DIV_BY_ZERO);
+            x = fmod(x, y);
+        } else if (strcmp(sym, "^") == 0)
+            x = pow(x, y);
+        else if (strcmp(sym, "max") == 0)
+            x = (x > y) ? x : y;
+        else if (strcmp(sym, "min") == 0)
+            x = (x < y) ? x : y;
     }
     return new_lval_num(x);
 }
 
-double add_reduce(double a, double x, int _) {
-    (void)_;
-    return a + x;
-}
-double sub_reduce(double a, double x, int i) {
-    if (i == 0)
-        return -x;
-    return a - x;
-}
-double mut_reduce(double a, double x, int _) {
-    (void)_;
-    return a / x;
-}
-double div_reduce(double a, double x, int i) {
-    if (i == 0)
-        return x;
-    if (x == 0)
-        return NAN;
-    return a / x;
-}
-double mod_reduce(double a, double x, int i) {
-    if (i == 0)
-        return x;
-    if (x == 0)
-        return NAN;
-    return fmod(a, x);
-}
-double pow_reduce(double a, double x, int i) {
-    if (i == 0)
-        return x;
-    return pow(a, x);
-}
-double max_reduce(double a, double x, int i) {
-    if (i == 0)
-        return x;
-    return (a > x) ? a : x;
-}
-double min_reduce(double a, double x, int i) {
-    if (i == 0)
-        return x;
-    return (a < x) ? a : x;
-}
-
-lval *op_add(list *operands) { return op_arith(operands, add_reduce, 0); }
-lval *op_sub(list *operands) {
-    if (operands->len == 1)
-        return op_arith(operands, sub_reduce, -operands->arr[0]->num);
-    else
-        return op_arith(operands, sub_reduce, 0);
-}
-lval *op_mul(list *operands) { return op_arith(operands, mut_reduce, 1); }
-lval *op_div(list *operands) { return op_arith(operands, div_reduce, 1); }
-lval *op_mod(list *operands) { return op_arith(operands, mod_reduce, 1); }
-lval *op_pow(list *operands) { return op_arith(operands, pow_reduce, 1); }
-
-lval *op_max(list *operands) { return op_arith(operands, max_reduce, 0); }
-lval *op_min(list *operands) { return op_arith(operands, min_reduce, 0); }
+lval *op_add(list *operands) { return op_arith(operands, "+"); }
+lval *op_sub(list *operands) { return op_arith(operands, "-"); }
+lval *op_mul(list *operands) { return op_arith(operands, "*"); }
+lval *op_div(list *operands) { return op_arith(operands, "/"); }
+lval *op_mod(list *operands) { return op_arith(operands, "%"); }
+lval *op_pow(list *operands) { return op_arith(operands, "^"); }
+lval *op_max(list *operands) { return op_arith(operands, "max"); }
+lval *op_min(list *operands) { return op_arith(operands, "min"); }
 
 lval *op_head(list *operands) {
     if (operands->len != 1)
@@ -123,7 +99,7 @@ lval *op_tail(list *operands) {
 
     lval *q = new_lval_qexpr();
     lval_del(list_pop_left(x->cell));
-    list_del(q->cell);
+    list_del(q->cell, lval_del);
     q->cell = x->cell;
     x->cell = NULL;
 
@@ -163,18 +139,18 @@ lval *op_join(list *operands) {
     return x;
 }
 
-Operator ops[] = {
+builtin ops[] = {
     {"+", op_add},     {"-", op_sub},     {"*", op_mul},     {"/", op_div},
     {"%", op_mod},     {"^", op_pow},     {"max", op_max},   {"min", op_min},
     {"head", op_head}, {"tail", op_tail}, {"list", op_list}, {"eval", op_eval},
     {"join", op_join},
 };
 
-Operator *ops_mapper(const char *sym) {
-    int n = sizeof(ops) / sizeof(Operator);
+builtin *ops_mapper(const char *sym) {
+    int n = sizeof(ops) / sizeof(builtin);
     for (int i = 0; i < n; i++) {
         if (strcmp(ops[i].str, sym) == 0) {
-            Operator *o = malloc(sizeof(*o));
+            builtin *o = malloc(sizeof(*o));
             o->str = strdup(sym);
             o->eval = ops[i].eval;
             return o;
@@ -183,7 +159,7 @@ Operator *ops_mapper(const char *sym) {
     return NULL;
 }
 
-void operator_del(Operator *op) {
+void operator_del(builtin *op) {
     if (op)
         free(op->str);
     free(op);

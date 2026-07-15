@@ -23,7 +23,7 @@ Grammer *create_lisp_grammer(void) {
 
     mpc_err_t *err = mpca_lang(MPCA_LANG_DEFAULT, "              \
     number  : /-?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)/ ;               \
-    symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ;                 \
+    symbol  : /[a-zA-Z0-9_+%\\-*\\/\\\\=<>!&]+/ ;                 \
     sexpr   : '(' <expr>* ')' ;                                  \
     qexpr   : '{' <expr>* '}' ;                                  \
     expr    : <number> | <symbol> | <sexpr> | <qexpr> ;          \

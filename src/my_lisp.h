@@ -15,7 +15,14 @@ typedef struct {
 void clean_grammer(Grammer *g);
 Grammer *create_lisp_grammer(void);
 
-typedef enum { LVAL_NUM, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR, LVAL_ERR } lval_type;
+typedef enum {
+    LVAL_NUM,
+    LVAL_SYM,
+    LVAL_FUNC,
+    LVAL_SEXPR,
+    LVAL_QEXPR,
+    LVAL_ERR
+} lval_type;
 
 void lval_type_print(lval_type t);
 
@@ -23,26 +30,31 @@ typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
 typedef struct lval lval;
 
+typedef void (*list_ele_del)(void *);
+typedef void *(*list_ele_clone)(void *);
 typedef struct {
     int len;
-    lval **arr;
+    void **arr;
 } list;
 
 list *new_list(void);
-void list_del(list *l);
-void list_push(list *l, lval *v);
+void list_del(list *l, list_ele_del del);
+void list_push(list *l, void *v);
 lval *list_take(list *l, int i);
 lval *list_pop_left(list *l);
 lval *list_pop(list *l);
-list *list_clone(list *l);
+list *list_clone(list *l, list_ele_clone clone);
 
-typedef lval *(*eval_op)(list *operands);
+typedef lval *(*builtin_f)(list *operands);
 typedef struct {
     char *str;
-    eval_op eval;
-} Operator;
-Operator *ops_mapper(const char *sym);
-void operator_del(Operator *op);
+    builtin_f eval;
+} builtin;
+
+builtin *new_builtin(void);
+
+builtin *ops_mapper(const char *sym);
+void operator_del(builtin *op);
 
 struct lval {
     lval_type type;
@@ -51,18 +63,20 @@ struct lval {
         double num;
         char *err;
         char *sym;
+        builtin_f func;
         list *cell;
     };
 };
 
 lval *new_lval_num(double num);
 lval *new_lval_err(const char *err);
+lval *new_lval_func(builtin_f f);
 lval *new_lval_symbol(char *sym);
 lval *new_lval_sexpr(void);
 lval *new_lval_qexpr(void);
 
-lval *lval_clone(lval *v);
-void lval_del(lval *v);
+void *lval_clone(void *v);
+void lval_del(void *v);
 
 void lval_print(lval *v);
 void lval_print_ln(lval *v);
@@ -70,4 +84,4 @@ void lval_print_expr(lval *v, char start, char end);
 
 lval *eval(lval *v);
 lval *lval_read(mpc_ast_t *tree);
-lval *builtin_op(lval *v, Operator *s);
+lval *builtin_op(lval *v, builtin *s);
