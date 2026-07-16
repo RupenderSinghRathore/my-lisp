@@ -34,17 +34,16 @@ typedef struct lval lval;
 typedef lval *(*builtin_f)(list *f, list *operands);
 typedef struct {
     char *sym;
-    builtin_f func;
+    lval *val;
 } func_map;
 
-list *new_func_list(void);
-void func_list_del(list *l);
-void func_del(void *v);
+list *new_env_list(void);
+void env_list_del(list *l);
+void env_del(void *v);
 void add_builtin_funcs(list *l);
-void func_add(list *l, char *sym, builtin_f func);
+void env_add(list *l, char *sym, lval *f);
 
-lval *ops_mapper(list *f, lval *v);
-void operator_del(func_map *op);
+lval *env_mapper(list *f, lval *v);
 
 struct lval {
     lval_type type;

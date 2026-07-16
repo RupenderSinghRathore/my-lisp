@@ -161,13 +161,13 @@ void lval_print_ln(lval *v) {
     putchar('\n');
 }
 
-lval *eval_sexpr(list *f, lval *v) {
+lval *eval_sexpr(list *env, lval *v) {
     lval *result = NULL;
     lval *x = NULL;
 
     list *cell = v->cell;
     for (int i = 0; i < cell->len; i++) {
-        cell->arr[i] = eval(f, cell->arr[i]);
+        cell->arr[i] = eval(env, cell->arr[i]);
 
         if (((lval *)cell->arr[i])->type == LVAL_ERR) {
             result = list_take(cell, i);
@@ -186,7 +186,7 @@ lval *eval_sexpr(list *f, lval *v) {
         result = new_lval_err("s-expression does not start with a function!");
         goto cleanup;
     }
-    result = x->func(f, cell);
+    result = x->func(env, cell);
 
 cleanup:
     lval_del(x);
@@ -194,15 +194,15 @@ cleanup:
     return result;
 }
 
-lval *eval(list *f, lval *v) {
+lval *eval(list *env, lval *v) {
     switch (v->type) {
     case LVAL_SYM: {
-        lval *e = ops_mapper(f, v);
+        lval *e = env_mapper(env, v);
         lval_del(v);
         return e;
     }
     case LVAL_SEXPR:
-        return eval_sexpr(f, v);
+        return eval_sexpr(env, v);
     default:
         return v;
     }

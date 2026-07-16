@@ -10,8 +10,8 @@
 int main(void) {
 
     Grammer *grammer = create_lisp_grammer();
-    list *f_map = new_func_list();
-    add_builtin_funcs(f_map);
+    list *env = new_env_list();
+    add_builtin_funcs(env);
 
     puts("my-lisp Version 0.001");
 
@@ -34,7 +34,7 @@ int main(void) {
             // mpc_ast_print(r.output);
             lval *l = lval_read(r.output);
             // lval_type_print(l->type);
-            l = eval(f_map, l);
+            l = eval(env, l);
             lval_print_ln(l);
 
             lval_del(l);
@@ -50,6 +50,6 @@ int main(void) {
     }
 
     clean_grammer(grammer);
-    func_list_del(f_map);
+    env_list_del(env);
     return 0;
 }

@@ -1,7 +1,6 @@
 #include "my_lisp.h"
 #include <assert.h>
 #include <math.h>
-#include <stdlib.h>
 #include <string.h>
 
 const char *ERR_DIV_BY_ZERO = "can't divide by zero!";
@@ -18,6 +17,12 @@ lval *must_be_qexpr(list *operands) {
     for (int i = 0; i < operands->len; i++)
         if (((lval *)operands->arr[i])->type != LVAL_QEXPR)
             return new_lval_err("function must be passed a q-expression!");
+    return NULL;
+}
+lval *must_be_symbol(list *operands) {
+    for (int i = 0; i < operands->len; i++)
+        if (((lval *)operands->arr[i])->type != LVAL_SYM)
+            return new_lval_err("function must be passed a symbol!");
     return NULL;
 }
 
@@ -61,8 +66,8 @@ lval *op_arith(list *operands, char *sym) {
 }
 
 #define DEFINE_ARITH_BUILTIN(name, op)                                         \
-    lval *name(list *f, list *args) {                                          \
-        (void)f;                                                               \
+    lval *name(list *env, list *args) {                                        \
+        (void)env;                                                             \
         return op_arith(args, op);                                             \
     }
 
@@ -75,8 +80,8 @@ DEFINE_ARITH_BUILTIN(op_pow, "^")
 DEFINE_ARITH_BUILTIN(op_max, "max")
 DEFINE_ARITH_BUILTIN(op_min, "min")
 
-lval *op_head(list *f, list *operands) {
-    (void)f;
+lval *op_head(list *env, list *operands) {
+    (void)env;
     if (operands->len != 1)
         return new_lval_err("function head passed too many args!");
 
@@ -92,8 +97,8 @@ lval *op_head(list *f, list *operands) {
     list_push(q->cell, list_pop_left(x->cell));
     return q;
 }
-lval *op_tail(list *f, list *operands) {
-    (void)f;
+lval *op_tail(list *env, list *operands) {
+    (void)env;
     if (operands->len != 1)
         return new_lval_err("function tail passed too many args!");
 
@@ -113,8 +118,8 @@ lval *op_tail(list *f, list *operands) {
 
     return q;
 }
-lval *op_list(list *f, list *operands) {
-    (void)f;
+lval *op_list(list *env, list *operands) {
+    (void)env;
     lval *x = new_lval_qexpr();
     while (operands->len > 0)
         list_push(x->cell, list_pop_left(operands));
@@ -132,8 +137,8 @@ lval *op_eval(list *f, list *operands) {
     exp->type = LVAL_SEXPR;
     return eval(f, exp);
 }
-lval *op_join(list *f, list *operands) {
-    (void)f;
+lval *op_join(list *env, list *operands) {
+    (void)env;
     lval *e = must_be_qexpr(operands);
     if (e)
         return e;
@@ -146,43 +151,62 @@ lval *op_join(list *f, list *operands) {
     }
     return x;
 }
+lval *op_def(list *env, list *operands) {
+    assert(operands->len != 0);
 
-func_map ops[] = {
-    {"+", op_add},     {"-", op_sub},     {"*", op_mul},     {"/", op_div},
-    {"%", op_mod},     {"^", op_pow},     {"max", op_max},   {"min", op_min},
-    {"head", op_head}, {"tail", op_tail}, {"list", op_list}, {"eval", op_eval},
-    {"join", op_join},
-};
+    lval *result = NULL;
+
+    lval *exp = list_pop_left(operands);
+    if (exp->type != LVAL_QEXPR) {
+        result = new_lval_err("operand must be a q-expr!");
+        goto cleanup;
+    }
+
+    if (exp->cell->len != operands->len) {
+        result = new_lval_err("unequal no. of args passed!");
+        goto cleanup;
+    }
+
+    lval *e = must_be_number(operands);
+    if (e) {
+        result = e;
+        goto cleanup;
+    }
+    e = must_be_symbol(exp->cell);
+    if (e) {
+        result = e;
+        goto cleanup;
+    }
+
+    for (int i = 0; i < exp->cell->len; i++) {
+        lval *curr = exp->cell->arr[i];
+        env_add(env, curr->sym, list_pop_left(operands));
+    }
+    result = new_lval_sexpr();
+
+cleanup:
+    lval_del(exp);
+    return result;
+}
+
+void register_func(list *env, char *sym, builtin_f func) {
+    env_add(env, sym, new_lval_func(func));
+}
 
 void add_builtin_funcs(list *l) {
-    func_add(l, "+", op_add);
-    func_add(l, "-", op_sub);
-    func_add(l, "*", op_mul);
-    func_add(l, "/", op_div);
-    func_add(l, "%", op_mod);
-    func_add(l, "^", op_pow);
-    func_add(l, "max", op_max);
-    func_add(l, "min", op_min);
+    register_func(l, "+", op_add);
+    register_func(l, "-", op_sub);
+    register_func(l, "*", op_mul);
+    register_func(l, "/", op_div);
+    register_func(l, "%", op_mod);
+    register_func(l, "^", op_pow);
+    register_func(l, "max", op_max);
+    register_func(l, "min", op_min);
 
-    func_add(l, "head", op_head);
-    func_add(l, "tail", op_tail);
-    func_add(l, "list", op_list);
-    func_add(l, "eval", op_eval);
-    func_add(l, "join", op_join);
-}
-
-lval *ops_mapper(list *l, lval *v) {
-    for (int i = 0; i < l->len; i++) {
-        func_map *curr = l->arr[i];
-        if (strcmp(curr->sym, v->sym) == 0) {
-            return new_lval_func(curr->func);
-        }
-    }
-    return new_lval_err("unknown symbol!");
-}
-
-void operator_del(func_map *op) {
-    if (op)
-        free(op->sym);
-    free(op);
+    register_func(l, "head", op_head);
+    register_func(l, "tail", op_tail);
+    register_func(l, "list", op_list);
+    register_func(l, "eval", op_eval);
+    register_func(l, "join", op_join);
+    register_func(l, "def", op_def);
 }
