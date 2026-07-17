@@ -19,7 +19,8 @@ int main(void) {
     bool quit = false;
     while (!quit) {
         char *res = readline(prompt);
-        assert(res);
+        if (!res)
+            break;
 
         if (strcmp(res, "") == 0)
             goto cleanup;

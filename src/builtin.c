@@ -3,14 +3,15 @@
 #include <math.h>
 #include <string.h>
 
-const char *ERR_DIV_BY_ZERO = "can't divide by zero!";
-
 typedef double (*reduce_fn)(double a, double b, int i);
 
 lval *type_err(const char *fn, lval_t got, lval_t want) {
     return new_lval_err("Function '%s' passed incorrect argument. got "
                         "%s, expected: %s.",
                         fn, lval_type(got), lval_type(want));
+}
+lval *zero_div_err(const char *fn) {
+    return new_lval_err("Function '%s', can't divide by zero.", fn);
 }
 
 lval *must_be_type(list *operands, const char *fn, lval_t want) {
@@ -59,11 +60,11 @@ lval *op_arith(list *operands, char *sym) {
             x *= y;
         else if (strcmp(sym, "/") == 0) {
             if (y == 0)
-                return new_lval_err(ERR_DIV_BY_ZERO);
+                return zero_div_err(sym);
             x /= y;
         } else if (strcmp(sym, "%") == 0) {
             if (y == 0)
-                return new_lval_err(ERR_DIV_BY_ZERO);
+                return zero_div_err(sym);
             x = fmod(x, y);
         } else if (strcmp(sym, "^") == 0)
             x = pow(x, y);
@@ -110,7 +111,7 @@ lval *op_head(list *env, list *operands) {
 
     lval *x = operands->arr[0];
     if (x->cell->len == 0)
-        return new_lval_err("function head passed {}!");
+        return new_lval_err("function '%s' passed {}.", "head");
 
     lval *q = new_lval_qexpr();
     list_push(q->cell, list_pop_left(x->cell));
@@ -127,7 +128,7 @@ lval *op_tail(list *env, list *operands) {
 
     lval *x = operands->arr[0];
     if (x->cell->len == 0)
-        return new_lval_err("function tail passed {}!");
+        return new_lval_err("function '%s' passed {}.", "tail");
 
     lval *q = new_lval_qexpr();
     lval_del(list_pop_left(x->cell));
