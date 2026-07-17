@@ -3,33 +3,28 @@
 #include <assert.h>
 #include <editline/readline.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void lval_type_print(lval_type t) {
+char *lval_type(lval_t t) {
     switch (t) {
     case LVAL_NUM:
-        printf("lval_num");
-        break;
+        return "Number";
     case LVAL_SYM:
-        printf("lval_sym");
-        break;
+        return "Symbol";
     case LVAL_SEXPR:
-        printf("lval_sexpr");
-        break;
+        return "S-expression";
     case LVAL_FUNC:
-        printf("lval_func");
-        break;
+        return "Function";
     case LVAL_QEXPR:
-        printf("lval_qexpr");
-        break;
+        return "Q-expression";
     case LVAL_ERR:
-        printf("lval_err");
-        break;
+        return "Error";
     }
-    putchar('\n');
+    return "";
 }
 
 lval *new_lval_num(double num) {
@@ -38,11 +33,15 @@ lval *new_lval_num(double num) {
     v->type = LVAL_NUM;
     return v;
 }
-lval *new_lval_err(const char *e) {
+lval *new_lval_err(const char *e, ...) {
+    va_list args;
+    va_start(args, e);
+
     lval *v = malloc(sizeof(*v));
 
-    v->err = malloc(strlen(e) + 1);
-    strcpy(v->err, e);
+    v->err = malloc(1 << 10);
+    vsnprintf(v->err, 1 << 10, e, args);
+    v->err = realloc(v->err, strlen(v->err) + 1);
 
     v->type = LVAL_ERR;
     return v;

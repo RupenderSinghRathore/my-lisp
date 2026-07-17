@@ -20,7 +20,22 @@ func_map *new_func(char *sym, lval *f) {
     return b;
 }
 
-void env_add(list *l, char *sym, lval *f) { list_push(l, new_func(sym, f)); }
+bool env_update(list *l, char *sym, lval *f) {
+    for (int i = 0; i < l->len; i++) {
+        func_map *curr = l->arr[i];
+        if (strcmp(curr->sym, sym) == 0) {
+            lval_del(curr->val);
+            curr->val = f;
+            return true;
+        }
+    }
+    return false;
+}
+
+void env_update_or_add(list *l, char *sym, lval *f) {
+    if (!env_update(l, sym, f))
+        list_push(l, new_func(sym, f));
+}
 
 lval *env_mapper(list *l, lval *v) {
     for (int i = 0; i < l->len; i++) {
@@ -29,5 +44,5 @@ lval *env_mapper(list *l, lval *v) {
             return lval_clone(curr->val);
         }
     }
-    return new_lval_err("unknown symbol!");
+    return new_lval_err("unknown symbol '%s'", v->sym);
 }

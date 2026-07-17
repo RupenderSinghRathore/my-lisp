@@ -7,18 +7,29 @@ const char *ERR_DIV_BY_ZERO = "can't divide by zero!";
 
 typedef double (*reduce_fn)(double a, double b, int i);
 
-lval *must_be_number(list *operands) {
-    for (int i = 0; i < operands->len; i++)
-        if (((lval *)operands->arr[i])->type != LVAL_NUM)
-            return new_lval_err("function must be passed a number!");
+lval *must_be_number(list *operands, char *fn) {
+    for (int i = 0; i < operands->len; i++) {
+        lval *curr = operands->arr[i];
+        if (curr->type != LVAL_NUM)
+            return new_lval_err("Function '%s' passed incorrect argument. got "
+                                "%s, expected: %s.",
+                                fn, lval_type(curr->type), lval_type(LVAL_NUM));
+    }
     return NULL;
 }
-lval *must_be_qexpr(list *operands) {
-    for (int i = 0; i < operands->len; i++)
-        if (((lval *)operands->arr[i])->type != LVAL_QEXPR)
-            return new_lval_err("function must be passed a q-expression!");
+lval *must_be_qexpr(list *operands, char *fn) {
+    for (int i = 0; i < operands->len; i++) {
+
+        lval *curr = operands->arr[i];
+        if (curr->type != LVAL_QEXPR)
+            return new_lval_err("Function '%s' passed incorrect argument. got "
+                                "%s, expected: %s.",
+                                fn, lval_type(curr->type),
+                                lval_type(LVAL_QEXPR));
+    }
     return NULL;
 }
+
 lval *must_be_symbol(list *operands) {
     for (int i = 0; i < operands->len; i++)
         if (((lval *)operands->arr[i])->type != LVAL_SYM)
@@ -30,7 +41,7 @@ lval *op_arith(list *operands, char *sym) {
 
     assert(operands->len != 0);
 
-    lval *e = must_be_number(operands);
+    lval *e = must_be_number(operands, sym);
     if (e)
         return e;
 
@@ -80,12 +91,18 @@ DEFINE_ARITH_BUILTIN(op_pow, "^")
 DEFINE_ARITH_BUILTIN(op_max, "max")
 DEFINE_ARITH_BUILTIN(op_min, "min")
 
+#define ASSERT_NO_OF_ARGS(fn, got, expected)                                   \
+    if (got != expected)                                                       \
+        return new_lval_err(                                                   \
+            "function '%s' passed too many arguments. got %i, expected %d.",   \
+            fn, got, expected);
+
 lval *op_head(list *env, list *operands) {
     (void)env;
-    if (operands->len != 1)
-        return new_lval_err("function head passed too many args!");
 
-    lval *e = must_be_qexpr(operands);
+    ASSERT_NO_OF_ARGS("head", operands->len, 1);
+
+    lval *e = must_be_qexpr(operands, "head");
     if (e)
         return e;
 
@@ -99,10 +116,10 @@ lval *op_head(list *env, list *operands) {
 }
 lval *op_tail(list *env, list *operands) {
     (void)env;
-    if (operands->len != 1)
-        return new_lval_err("function tail passed too many args!");
 
-    lval *e = must_be_qexpr(operands);
+    ASSERT_NO_OF_ARGS("tail", operands->len, 1);
+
+    lval *e = must_be_qexpr(operands, "tail");
     if (e)
         return e;
 
@@ -126,10 +143,9 @@ lval *op_list(list *env, list *operands) {
     return x;
 }
 lval *op_eval(list *f, list *operands) {
-    if (operands->len != 1)
-        return new_lval_err("function eval passed too many args!");
+    ASSERT_NO_OF_ARGS("eval", operands->len, 1);
 
-    lval *e = must_be_qexpr(operands);
+    lval *e = must_be_qexpr(operands, "eval");
     if (e)
         return e;
 
@@ -139,7 +155,7 @@ lval *op_eval(list *f, list *operands) {
 }
 lval *op_join(list *env, list *operands) {
     (void)env;
-    lval *e = must_be_qexpr(operands);
+    lval *e = must_be_qexpr(operands, "join");
     if (e)
         return e;
 
@@ -167,7 +183,7 @@ lval *op_def(list *env, list *operands) {
         goto cleanup;
     }
 
-    lval *e = must_be_number(operands);
+    lval *e = must_be_number(operands, "def");
     if (e) {
         result = e;
         goto cleanup;
@@ -180,7 +196,7 @@ lval *op_def(list *env, list *operands) {
 
     for (int i = 0; i < exp->cell->len; i++) {
         lval *curr = exp->cell->arr[i];
-        env_add(env, curr->sym, list_pop_left(operands));
+        env_update_or_add(env, curr->sym, list_pop_left(operands));
     }
     result = new_lval_sexpr();
 
@@ -190,7 +206,7 @@ cleanup:
 }
 
 void register_func(list *env, char *sym, builtin_f func) {
-    env_add(env, sym, new_lval_func(func));
+    env_update_or_add(env, sym, new_lval_func(func));
 }
 
 void add_builtin_funcs(list *l) {

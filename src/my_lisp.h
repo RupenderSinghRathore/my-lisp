@@ -23,9 +23,9 @@ typedef enum {
     LVAL_SEXPR,
     LVAL_QEXPR,
     LVAL_ERR
-} lval_type;
+} lval_t;
 
-void lval_type_print(lval_type t);
+char *lval_type(lval_t t);
 
 typedef enum { LERR_DIV_BY_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err;
 
@@ -41,12 +41,12 @@ list *new_env_list(void);
 void env_list_del(list *l);
 void env_del(void *v);
 void add_builtin_funcs(list *l);
-void env_add(list *l, char *sym, lval *f);
+void env_update_or_add(list *l, char *sym, lval *f);
 
 lval *env_mapper(list *f, lval *v);
 
 struct lval {
-    lval_type type;
+    lval_t type;
 
     union {
         double num;
@@ -58,7 +58,7 @@ struct lval {
 };
 
 lval *new_lval_num(double num);
-lval *new_lval_err(const char *err);
+lval *new_lval_err(const char *err, ...);
 lval *new_lval_func(builtin_f f);
 lval *new_lval_symbol(char *sym);
 lval *new_lval_sexpr(void);
