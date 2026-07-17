@@ -36,7 +36,7 @@ int main(void) {
             // printf("%s\n", lval_type(t));
             // lval_type_print(l->type);
             l = eval(env, l);
-            lval_print_ln(l);
+            lval_println(l);
 
             lval_del(l);
             mpc_ast_delete(r.output);

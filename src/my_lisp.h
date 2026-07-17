@@ -66,10 +66,7 @@ lval *new_lval_qexpr(void);
 
 void *lval_clone(void *v);
 void lval_del(void *v);
-
-void lval_print(lval *v);
-void lval_print_ln(lval *v);
-void lval_print_expr(lval *v, char start, char end);
+void lval_println(lval *v);
 
 lval *eval(list *f, lval *v);
 lval *lval_read(mpc_ast_t *tree);

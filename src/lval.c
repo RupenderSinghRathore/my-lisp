@@ -119,6 +119,8 @@ void *lval_clone(void *g) {
     return NULL;
 }
 
+void lval_print(lval *v);
+
 void lval_print_expr(lval *v, char start, char end) {
     putchar(start);
     for (int i = 0; i < v->cell->len; i++) {
@@ -155,7 +157,7 @@ void lval_print(lval *v) {
         break;
     }
 }
-void lval_print_ln(lval *v) {
+void lval_println(lval *v) {
     lval_print(v);
     putchar('\n');
 }

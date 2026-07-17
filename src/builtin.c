@@ -7,27 +7,26 @@ const char *ERR_DIV_BY_ZERO = "can't divide by zero!";
 
 typedef double (*reduce_fn)(double a, double b, int i);
 
-lval *must_be_number(list *operands, char *fn) {
+lval *type_err(const char *fn, lval_t got, lval_t want) {
+    return new_lval_err("Function '%s' passed incorrect argument. got "
+                        "%s, expected: %s.",
+                        fn, lval_type(got), lval_type(want));
+}
+
+lval *must_be_type(list *operands, const char *fn, lval_t want) {
     for (int i = 0; i < operands->len; i++) {
         lval *curr = operands->arr[i];
-        if (curr->type != LVAL_NUM)
-            return new_lval_err("Function '%s' passed incorrect argument. got "
-                                "%s, expected: %s.",
-                                fn, lval_type(curr->type), lval_type(LVAL_NUM));
+        if (curr->type != want)
+            return type_err(fn, curr->type, want);
     }
     return NULL;
 }
-lval *must_be_qexpr(list *operands, char *fn) {
-    for (int i = 0; i < operands->len; i++) {
 
-        lval *curr = operands->arr[i];
-        if (curr->type != LVAL_QEXPR)
-            return new_lval_err("Function '%s' passed incorrect argument. got "
-                                "%s, expected: %s.",
-                                fn, lval_type(curr->type),
-                                lval_type(LVAL_QEXPR));
-    }
-    return NULL;
+lval *must_be_number(list *operands, const char *fn) {
+    return must_be_type(operands, fn, LVAL_NUM);
+}
+lval *must_be_qexpr(list *operands, const char *fn) {
+    return must_be_type(operands, fn, LVAL_QEXPR);
 }
 
 lval *must_be_symbol(list *operands) {
@@ -92,10 +91,13 @@ DEFINE_ARITH_BUILTIN(op_max, "max")
 DEFINE_ARITH_BUILTIN(op_min, "min")
 
 #define ASSERT_NO_OF_ARGS(fn, got, expected)                                   \
-    if (got != expected)                                                       \
-        return new_lval_err(                                                   \
-            "function '%s' passed too many arguments. got %i, expected %d.",   \
-            fn, got, expected);
+    do {                                                                       \
+        if ((got) != (expected))                                               \
+            return new_lval_err(                                               \
+                "function '%s' passed incorrect number of arguments. "         \
+                "got %i, expected %d.",                                        \
+                (fn), (got), (expected));                                      \
+    } while (0);
 
 lval *op_head(list *env, list *operands) {
     (void)env;
@@ -174,12 +176,14 @@ lval *op_def(list *env, list *operands) {
 
     lval *exp = list_pop_left(operands);
     if (exp->type != LVAL_QEXPR) {
-        result = new_lval_err("operand must be a q-expr!");
+        result = type_err("def", exp->type, LVAL_QEXPR);
         goto cleanup;
     }
 
     if (exp->cell->len != operands->len) {
-        result = new_lval_err("unequal no. of args passed!");
+        result = new_lval_err(
+            "function '%s' passed unequal number of arguments to variable",
+            "def");
         goto cleanup;
     }
 
