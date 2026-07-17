@@ -16,11 +16,11 @@ char *lval_type(lval_t t) {
     case LVAL_SYM:
         return "Symbol";
     case LVAL_SEXPR:
-        return "S-expression";
+        return "S-Expression";
     case LVAL_FUNC:
         return "Function";
     case LVAL_QEXPR:
-        return "Q-expression";
+        return "Q-Expression";
     case LVAL_ERR:
         return "Error";
     }
