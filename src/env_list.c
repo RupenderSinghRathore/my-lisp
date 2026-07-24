@@ -13,14 +13,14 @@ void env_del(void *v) {
     free(f);
 }
 
-func_map *new_func(char *sym, lval *f) {
+static func_map *new_func(char *sym, lval *f) {
     func_map *b = malloc(sizeof(*b));
     b->sym = strdup(sym);
     b->val = f;
     return b;
 }
 
-bool env_update(list *l, char *sym, lval *f) {
+static bool env_update(list *l, char *sym, lval *f) {
     for (int i = 0; i < l->len; i++) {
         func_map *curr = l->arr[i];
         if (strcmp(curr->sym, sym) == 0) {

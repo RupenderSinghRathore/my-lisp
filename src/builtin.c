@@ -5,16 +5,16 @@
 
 typedef double (*reduce_fn)(double a, double b, int i);
 
-lval *type_err(const char *fn, lval_t got, lval_t want) {
+static lval *type_err(const char *fn, lval_t got, lval_t want) {
     return new_lval_err("Function '%s' passed incorrect argument. got "
                         "%s, expected: %s.",
                         fn, lval_type(got), lval_type(want));
 }
-lval *zero_div_err(const char *fn) {
+static lval *zero_div_err(const char *fn) {
     return new_lval_err("Function '%s', can't divide by zero.", fn);
 }
 
-lval *must_be_type(list *operands, const char *fn, lval_t want) {
+static lval *must_be_type(list *operands, const char *fn, lval_t want) {
     for (int i = 0; i < operands->len; i++) {
         lval *curr = operands->arr[i];
         if (curr->type != want)
@@ -23,21 +23,21 @@ lval *must_be_type(list *operands, const char *fn, lval_t want) {
     return NULL;
 }
 
-lval *must_be_number(list *operands, const char *fn) {
+static lval *must_be_number(list *operands, const char *fn) {
     return must_be_type(operands, fn, LVAL_NUM);
 }
-lval *must_be_qexpr(list *operands, const char *fn) {
+static lval *must_be_qexpr(list *operands, const char *fn) {
     return must_be_type(operands, fn, LVAL_QEXPR);
 }
 
-lval *must_be_symbol(list *operands) {
+static lval *must_be_symbol(list *operands) {
     for (int i = 0; i < operands->len; i++)
         if (((lval *)operands->arr[i])->type != LVAL_SYM)
             return new_lval_err("function must be passed a symbol!");
     return NULL;
 }
 
-lval *op_arith(list *operands, char *sym) {
+static lval *op_arith(list *operands, char *sym) {
 
     assert(operands->len != 0);
 
@@ -100,7 +100,7 @@ DEFINE_ARITH_BUILTIN(op_min, "min")
                 (fn), (got), (expected));                                      \
     } while (0);
 
-lval *op_head(list *env, list *operands) {
+static lval *op_head(list *env, list *operands) {
     (void)env;
 
     ASSERT_NO_OF_ARGS("head", operands->len, 1);
@@ -117,7 +117,7 @@ lval *op_head(list *env, list *operands) {
     list_push(q->cell, list_pop_left(x->cell));
     return q;
 }
-lval *op_tail(list *env, list *operands) {
+static lval *op_tail(list *env, list *operands) {
     (void)env;
 
     ASSERT_NO_OF_ARGS("tail", operands->len, 1);
@@ -138,14 +138,14 @@ lval *op_tail(list *env, list *operands) {
 
     return q;
 }
-lval *op_list(list *env, list *operands) {
+static lval *op_list(list *env, list *operands) {
     (void)env;
     lval *x = new_lval_qexpr();
     while (operands->len > 0)
         list_push(x->cell, list_pop_left(operands));
     return x;
 }
-lval *op_eval(list *f, list *operands) {
+static lval *op_eval(list *f, list *operands) {
     ASSERT_NO_OF_ARGS("eval", operands->len, 1);
 
     lval *e = must_be_qexpr(operands, "eval");
@@ -156,7 +156,7 @@ lval *op_eval(list *f, list *operands) {
     exp->type = LVAL_SEXPR;
     return eval(f, exp);
 }
-lval *op_join(list *env, list *operands) {
+static lval *op_join(list *env, list *operands) {
     (void)env;
     lval *e = must_be_qexpr(operands, "join");
     if (e)
@@ -170,7 +170,7 @@ lval *op_join(list *env, list *operands) {
     }
     return x;
 }
-lval *op_def(list *env, list *operands) {
+static lval *op_def(list *env, list *operands) {
     assert(operands->len != 0);
 
     lval *result = NULL;
@@ -210,7 +210,7 @@ cleanup:
     return result;
 }
 
-void register_func(list *env, char *sym, builtin_f func) {
+static void register_func(list *env, char *sym, builtin_f func) {
     env_update_or_add(env, sym, new_lval_func(func));
 }
 

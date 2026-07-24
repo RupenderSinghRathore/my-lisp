@@ -119,9 +119,9 @@ void *lval_clone(void *g) {
     return NULL;
 }
 
-void lval_print(lval *v);
+static void lval_print(lval *v);
 
-void lval_print_expr(lval *v, char start, char end) {
+static void lval_print_expr(lval *v, char start, char end) {
     putchar(start);
     for (int i = 0; i < v->cell->len; i++) {
         lval_print(v->cell->arr[i]);
@@ -131,7 +131,7 @@ void lval_print_expr(lval *v, char start, char end) {
     putchar(end);
 }
 
-void lval_print(lval *v) {
+static void lval_print(lval *v) {
     switch (v->type) {
     case LVAL_NUM:
         printf("%g", v->num);
@@ -162,7 +162,7 @@ void lval_println(lval *v) {
     putchar('\n');
 }
 
-lval *eval_sexpr(list *env, lval *v) {
+static lval *eval_sexpr(list *env, lval *v) {
     lval *result = NULL;
     lval *x = NULL;
 
@@ -209,7 +209,7 @@ lval *eval(list *env, lval *v) {
     }
 }
 
-lval *lval_read_number(mpc_ast_t *t) {
+static lval *lval_read_number(mpc_ast_t *t) {
     errno = 0;
     double num = strtod(t->contents, NULL);
     return (errno == ERANGE) ? new_lval_err("invalid number")
